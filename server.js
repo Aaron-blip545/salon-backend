@@ -21,7 +21,7 @@ app.post('/test', (req, res) => {
 });
 
 // ----- SIGN UP (REGISTER) -----
-app.post('/register', async (req, res) => {
+app.post('/api/register', async (req, res) => {
   const { name, phone, password } = req.body;
   if (!name || !phone || !password)
     return res.status(400).json({ message: 'Missing fields' });
@@ -45,7 +45,7 @@ app.post('/register', async (req, res) => {
 });
 
 // ----- LOGIN -----
-app.post('/login', (req, res) => {
+app.post('/api/login', (req, res) => {
   const { phone, password } = req.body;
   if (!phone || !password)
     return res.status(400).json({ message: 'Missing fields' });
