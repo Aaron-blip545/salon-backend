@@ -1,0 +1,23 @@
+const BOOKING_STATUS = {
+  PENDING: 'PENDING',
+  CONFIRMED: 'CONFIRMED',
+  COMPLETED: 'COMPLETED',
+  CANCELLED: 'CANCELLED'
+};
+
+const BUSINESS_HOURS = [
+  '09:00', '10:00', '11:00', '12:00',
+  '13:00', '14:00', '15:00', '16:00', '17:00'
+];
+
+const USER_ROLES = {
+  CUSTOMER: 'CUSTOMER',
+  STAFF: 'STAFF',
+  ADMIN: 'ADMIN'
+};
+
+module.exports = {
+  BOOKING_STATUS,
+  BUSINESS_HOURS,
+  USER_ROLES
+};
