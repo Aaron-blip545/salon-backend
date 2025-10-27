@@ -66,45 +66,8 @@ const serviceController = {
     } catch (error) {
       next(error);
     }
-  },
-
-  // Update service (Admin only)
-  updateService: async (req, res, next) => {
-    try {
-      const { id } = req.params;
-      const { name, description, price, duration } = req.body;
-
-      await serviceService.updateService(id, {
-        name,
-        description,
-        price,
-        duration
-      });
-
-      res.json({
-        success: true,
-        message: 'Service updated successfully'
-      });
-    } catch (error) {
-      next(error);
-    }
-  },
-
-  // Delete service (Admin only)
-  deleteService: async (req, res, next) => {
-    try {
-      const { id } = req.params;
-
-      await serviceService.deleteService(id);
-
-      res.json({
-        success: true,
-        message: 'Service deleted successfully'
-      });
-    } catch (error) {
-      next(error);
-    }
   }
+
 };
 
 module.exports = serviceController;
