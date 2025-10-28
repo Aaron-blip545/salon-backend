@@ -8,4 +8,17 @@ const serviceService = {
   }
 };
 
+  // Get service by ID
+  serviceService.getServiceById = async (service_id) => {
+    const service = await serviceRepository.findById(service_id);
+    return service;
+  };
+
+  // Create new service
+  serviceService.createServices = async ({ name, description, price, duration }) => {
+    const serviceId = await serviceRepository.addService({ name, description, price, duration });
+    return serviceId;
+  }   
+
+
 module.exports = serviceService;

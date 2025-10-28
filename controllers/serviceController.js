@@ -51,7 +51,7 @@ const serviceController = {
         });
       }
 
-      const result = await serviceService.createService({
+      const result = await serviceService.createServices({
         name,
         description,
         price,

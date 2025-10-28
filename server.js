@@ -4,9 +4,9 @@ const cors = require('cors');
 const bodyParser = require('body-parser');
 
 // Import routes
-const authRoutes = require('./routes/authRoutes');
-const bookingRoutes = require('./routes/bookingRoutes');
-const serviceRoutes = require('./routes/serviceRoutes');
+const authRoutes = require('./routes/authRoute');
+const bookingRoutes = require('./routes/bookingRoute');
+const serviceRoutes = require('./routes/serviceRoute');
 
 // Import middleware
 const errorHandler = require('./middleware/errorHandler');

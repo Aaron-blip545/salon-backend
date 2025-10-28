@@ -1,6 +1,6 @@
 const bookingRepository = require('../repositories/bookingRepository');
 const ApiError = require('../utils/ApiError');
-const { BOOKING_STATUS, BUSINESS_HOURS } = require('../utils/constants');
+const { BOOKING_STATUS, BUSINESS_HOURS } = require('../utils/constant');
 
 const bookingService = {
   // Create new booking
@@ -81,6 +81,7 @@ const bookingService = {
     // Delete booking
     await bookingRepository.deleteById(booking_id);
   }
+
 };
 
 module.exports = bookingService;
