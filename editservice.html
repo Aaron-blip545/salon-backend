@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Editable Booking Services</title>
+  <link rel="stylesheet" href="editservices.css">
+</head>
+<body>
+
+  <!-- Back Button -->
+ <a href="adminpanel.html" class="back-btn">← Back</a>
+
+  <h1>Editable Booking Services</h1>
+
+  <div class="controls">
+    <input type="text" id="service-name" placeholder="Service Name">
+    <input type="text" id="service-duration" placeholder="Duration (e.g. 60 min)">
+    <input type="text" id="service-img" placeholder="Image URL (optional)">
+    <button id="add-service">Add Service</button>
+  </div>
+
+  <div class="booking-container" id="booking-container">
+    <!-- Default services -->
+    <div class="booking-card">
+      <button class="remove-btn">&times;</button>
+      <img src="images/hotstone.png" alt="Hot Stone Massage">
+      <h3 contenteditable="false">Hot Stone Massage</h3>
+      <p contenteditable="false"><strong>60 min</strong></p>
+      <input type="datetime-local">
+      <button class="confirm-btn">Book Now</button>
+    </div>
+
+    <div class="booking-card">
+      <button class="remove-btn">&times;</button>
+      <img src="images/footsoak.png" alt="Aromatherapy Foot Soak">
+      <h3 contenteditable="false">Aromatherapy Foot Soak</h3>
+      <p contenteditable="false"><strong>30 min</strong></p>
+      <input type="datetime-local">
+      <button class="confirm-btn">Book Now</button>
+    </div>
+
+    <div class="booking-card">
+      <button class="remove-btn">&times;</button>
+      <img src="images/reflexology.png" alt="Reflexology">
+      <h3 contenteditable="false">Reflexology</h3>
+      <p contenteditable="false"><strong>60 min</strong></p>
+      <input type="datetime-local">
+      <button class="confirm-btn">Book Now</button>
+    </div>
+  </div>
+
+  <script>
+    const container = document.getElementById('booking-container');
+    const addBtn = document.getElementById('add-service');
+
+    // Add new service
+    addBtn.addEventListener('click', () => {
+      const name = document.getElementById('service-name').value.trim() || 'New Service';
+      const duration = document.getElementById('service-duration').value.trim() || '30 min';
+      const img = document.getElementById('service-img').value.trim() || 'https://via.placeholder.com/300x180?text=Service';
+
+      const card = document.createElement('div');
+      card.classList.add('booking-card');
+      card.innerHTML = `
+        <button class="remove-btn">&times;</button>
+        <img src="${img}" alt="${name}">
+        <h3 contenteditable="true">${name}</h3>
+        <p contenteditable="true"><strong>${duration}</strong></p>
+        <input type="datetime-local">
+        <button class="confirm-btn">Book Now</button>
+      `;
+      container.appendChild(card);
+      attachCardEvents(card);
+    });
+
+    // Attach remove/edit events to cards
+    function attachCardEvents(card) {
+      const removeBtn = card.querySelector('.remove-btn');
+      removeBtn.addEventListener('click', () => card.remove());
+
+      const nameEl = card.querySelector('h3');
+      const durEl = card.querySelector('p');
+
+      nameEl.addEventListener('dblclick', () => nameEl.setAttribute('contenteditable', 'true'));
+      durEl.addEventListener('dblclick', () => durEl.setAttribute('contenteditable', 'true'));
+
+      [nameEl, durEl].forEach(el => {
+        el.addEventListener('blur', () => el.setAttribute('contenteditable', 'false'));
+      });
+    }
+
+    // Enable remove/edit for existing cards
+    document.querySelectorAll('.booking-card').forEach(attachCardEvents);
+  </script>
+
+</body>
+</html>

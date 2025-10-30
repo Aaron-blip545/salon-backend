@@ -1,0 +1,236 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family:'Times New Roman', Times, serif;
+}
+
+/* Navigation Bar */
+.navbar {
+  background-color: #dfd8c5;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+}
+
+.navdiv {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px 40px;
+}
+
+.logo a {
+  font-size: 1.8rem;
+  font-weight: bold;
+  color: #ffffff; /* Spa-inspired green */
+  font-family: 'Playfair Display', serif;
+  text-decoration: none;
+}
+
+.navbar ul {
+  list-style: none;
+  display: flex;
+  gap: 30px;
+}
+
+.navbar ul li {
+  display: inline-block;
+}
+
+.navbar ul li a {
+  text-decoration: none;
+  font-size: 1rem;
+  color: #333;
+  font-family: 'Merriweather', serif;
+  transition: color 0.3s ease, border-bottom 0.3s ease;
+}
+
+.navbar ul li a:hover {
+  color: #dfd8c5;
+  border-bottom: 2px solid #fffaf6;
+  padding-bottom: 3px;
+}
+/* Booking Section wrapper */
+.booking-section {
+    text-align: center;
+    margin: 40px 0;
+}
+
+/* Layout for booking options */
+.booking-options {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); 
+    gap: 20px;
+    max-width: 1100px;
+    margin: auto;
+}
+
+/* Each booking card */
+.booking-card {
+    background: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    padding: 15px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+}
+.booking-card :hover{
+   transform: translateY(-5px);
+}
+
+/* Images inside booking cards */
+.booking-card img {
+    width: 100%;
+    height: 150px;
+    border-radius: 10px;
+    margin-bottom: 10px;
+}
+  
+/* Title */
+.booking-card h3 {
+    margin: 10px 0 5px;
+    color: #333;
+}
+
+/* Date picker */
+.booking-card input[type="datetime-local"] {
+    margin: 10px 0;
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    width: 100%;
+}
+
+/* Book button */
+.confirm-btn {
+    padding: 10px;
+    background-color: #dfd8c5;
+    color: white;
+    font-weight: bold;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: 0.3s;
+    width: 100%;
+    
+}
+
+.confirm-btn:hover {
+    background-color: #dfd8c5;
+     transform: translateY(-5px);
+}
+/* Welcome Banner */
+.welcome-banner {
+    position: relative;
+    text-align: center;
+    color: white;
+    margin-bottom: 40px;
+}
+
+/* Banner image */
+.welcome-banner img {
+    width: 100%;
+    height: 450px;
+    object-fit:cover;
+    border-bottom: 5px solid #dfd8c5;
+}
+.welcome-text {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(0, 0, 0, 0.5); 
+    padding: 20px 40px;
+    border-radius: 10px;
+}
+
+.welcome-text h1 {
+    font-size: 32px;
+    margin-bottom: 10px;
+}
+
+.welcome-text p {
+    font-size: 18px;
+}
+.contact-container {
+  display: flex;
+  margin:none;
+  gap: 40px;
+  border-top: 5px solid #d3bf80;
+}
+
+/* Left Section */
+.contact-info {
+  flex: 1;
+  margin:20px;
+}
+
+.contact-info h2 {
+  color: #b48a00;
+  margin-bottom: 15px;
+}
+
+.contact-info p {
+  margin-bottom: 20px;
+  line-height: 1.6;
+}
+
+.contact-item {
+  display: flex;
+  align-items: center;
+  margin-bottom: 15px;
+  font-size: 14px;
+}
+
+/* Right Section */
+.contact-form {
+  flex: 1;
+  background: #fffaf6;  
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+   margin:20px;
+}
+
+.contact-form label {
+  display: block;
+  margin-bottom: 5px;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+.contact-form input,
+.contact-form textarea {
+  width: 100%;
+  padding: 10px;
+  margin-bottom: 15px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.contact-form textarea {
+  resize: none;
+  height: 100px;
+}
+
+.contact-form button {
+  background: #b48a00;
+  color: white;
+  border: none;
+  padding: 12px 20px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 16px;
+}
+
+.contact-form button:hover {
+  background: #8a6d00;
+}
