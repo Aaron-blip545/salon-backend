@@ -109,15 +109,16 @@ const bookingRepository = {
   },
 
   // Check if time slot is available
-  isTimeSlotAvailable: async (booking_date) => {
+  isTimeSlotAvailable: async (booking_date, booking_time) => {
     const sql = `
       SELECT COUNT(*) as count 
       FROM bookings b
       JOIN bookingstatus bs ON b.STATUS_ID = bs.STATUS_ID
       WHERE b.BOOKING_DATE = ?
+      AND b.BOOKINTG_TIME = ?
       AND bs.STATUS_NAME IN ('pending', 'confirmed')
     `;
-    const results = await promisifyQuery(sql, [booking_date]);
+    const results = await promisifyQuery(sql, [booking_date, booking_time]);
     return results[0].count === 0;
   },
 
