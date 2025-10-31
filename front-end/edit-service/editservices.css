@@ -1,0 +1,176 @@
+:root {
+  --primary: #a4ac8b;
+  --light: #f8f8f5;
+  --text: #333;
+  --muted: #6b6f63;
+  --danger: #d56b6b;
+  --radius: 12px;
+  font-family: "Poppins", sans-serif;
+}
+
+/* Added universal box-sizing for consistent sizing */
+* {
+  box-sizing: border-box;
+}
+
+body {
+  background: var(--light);
+  color: var(--text);
+  padding: 30px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+h1 {
+  color: var(--primary);
+  margin-bottom: 20px;
+}
+
+.controls {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+input,
+button {
+  border-radius: var(--radius);
+  border: 1px solid #ccc;
+  padding: 10px 12px;
+  font-size: 14px;
+}
+
+button {
+  background: var(--primary);
+  color: white;
+  border: none;
+  cursor: pointer;
+  transition: 0.3s;
+}
+
+button:hover {
+  opacity: 0.9;
+}
+
+.booking-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 20px;
+  width: 100%;
+  max-width: 1000px;
+}
+
+/* CARD */
+.booking-card {
+  background: white;
+  border-radius: var(--radius);
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.08);
+  padding: 15px;
+  text-align: center;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  height: 100%;
+}
+
+/* Ensure images fit neatly within the box */
+.booking-card img {
+  width: 100%;
+  height: 180px;
+  object-fit: cover;
+  border-radius: var(--radius);
+  margin-bottom: 10px;
+}
+
+/* Editable fields */
+.booking-card h3[contenteditable="true"],
+.booking-card p[contenteditable="true"] {
+  border: 1px dashed var(--primary);
+  padding: 3px;
+  border-radius: 5px;
+}
+
+.booking-card h3 {
+  margin: 10px 0 5px;
+  color: var(--primary);
+  font-size: 1.1rem;
+}
+
+.booking-card p {
+  margin: 0 0 8px;
+  color: var(--muted);
+}
+
+/* Input fits width of card */
+.booking-card input[type="datetime-local"] {
+  width: 100%;
+  margin-bottom: 10px;
+  border: 1px solid #ccc;
+  border-radius: var(--radius);
+  padding: 8px;
+}
+
+/* Buttons fit nicely and align */
+.confirm-btn {
+  width: 100%;
+  background: var(--primary);
+  color: white;
+  border: none;
+  padding: 10px;
+  border-radius: var(--radius);
+  cursor: pointer;
+  font-weight: 600;
+  margin-top: auto;
+}
+
+.confirm-btn:hover {
+  opacity: 0.9;
+}
+
+/* Remove button (top-right corner) */
+.remove-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: var(--danger);
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  cursor: pointer;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+.back-btn {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  background-color: #a4ac8b;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 20px;
+  font-size: 15px;
+  cursor: pointer;
+  transition: 0.3s ease;
+}
+
+.back-btn:hover {
+  background-color: #8e9678;
+  transform: translateY(-2px);
+}
+
+/* Adjust title position so it doesn’t overlap */
+h1 {
+  text-align: center;
+  margin-top: 70px; /* pushes it down below the back button */
+  color: #a4ac8b;
+}
