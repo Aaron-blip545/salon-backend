@@ -10,7 +10,7 @@ router.get('/available-slots', bookingController.getAvailableSlots);
 router.post('/:id/booking', authenticateToken, bookingController.createBooking);
 router.get('/:id/getbooking', authenticateToken, bookingController.getUserBookings);
 router.patch('/:id/status', authenticateToken, bookingController.updateBookingStatus);
-router.delete('/:id', authenticateToken, bookingController.deleteBooking);
+router.delete('/:id/remove', authenticateToken, bookingController.deleteBooking);
 
 
 

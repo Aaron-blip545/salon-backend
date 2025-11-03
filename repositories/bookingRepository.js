@@ -22,6 +22,7 @@ const bookingRepository = {
     return result.insertId;
   },
 
+  
   // Find booking by ID with all details
   findById: async (booking_id) => {
     const sql = `

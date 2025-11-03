@@ -1,0 +1,165 @@
+/* ---------- GENERAL PAGE STYLING ---------- */
+body {
+  font-family: Arial, sans-serif;
+background-image: linear-gradient(to right, #43e97b 0%, #38f9d7 100%);  margin: 0;
+  padding: 20px;
+  color: #222;
+}
+
+/* Main content layout */
+.page {
+  max-width: 900px;
+  margin: 0 auto;
+  display: grid;
+  gap: 20px;
+}
+
+/* ---------- CARD STYLING ---------- */
+.card {
+  background-color: #fff;
+  border-radius: 10px;
+  padding: 20px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+/* ---------- PRODUCT SECTION ---------- */
+.product {
+  display: flex;
+  gap: 20px;
+  align-items: flex-start;
+}
+
+.product-img {
+  width: 250px;
+  border-radius: 8px;
+}
+
+.product-info {
+  flex: 1;
+}
+
+.product-title {
+  margin: 0;
+  font-size: 1.6rem;
+  font-weight: bold;
+}
+
+.product-tagline {
+  margin: 5px 0 15px;
+  color: #666;
+}
+
+.product-desc {
+  margin-bottom: 10px;
+  line-height: 1.5;
+  color: #333;
+}
+
+.features {
+  margin-bottom: 15px;
+  color: #666;
+}
+
+.price-row {
+  margin-bottom: 10px;
+}
+
+.price {
+  font-size: 1.2rem;
+  font-weight: bold;
+}
+
+/* Add to Cart Button */
+.buy-btn {
+  background-color: #6ab89b;
+  color: #fff;
+  border: none;
+  padding: 10px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.buy-btn:hover {
+  background-color: #a5ccb2;
+}
+
+/* ---------- DATE PICKER SECTION ---------- */
+.datepicker p {
+  color: #666;
+  margin-bottom: 10px;
+}
+
+.date-form {
+  display: grid;
+  gap: 10px;
+  max-width: 350px;
+}
+
+.date-form label {
+  font-size: 0.9rem;
+  color: #222;
+}
+
+.date-form input[type="date"],
+.date-form input[type="time"] {
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 1rem;
+}
+
+/* Buttons inside form */
+.form-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.btn {
+  background-color: #6ab89b;
+  color: #fff;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.btn:hover {
+  background-color: #a5ccb2;
+}
+
+.btn.ghost {
+  background-color: transparent;
+  color: #6ab89b;
+  border: 1px solid #6ab89b;
+}
+
+.chosen {
+  font-size: 0.9rem;
+  color: #666;
+  margin-top: 6px;
+}
+
+/* ---------- RESPONSIVE DESIGN ---------- */
+@media (max-width: 720px) {
+  .product {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .product-img {
+    width: 100%;
+    max-width: 400px;
+  }
+
+  .product-info {
+    width: 100%;
+  }
+
+  .buy-btn {
+    width: 100%;
+  }
+}
+
+

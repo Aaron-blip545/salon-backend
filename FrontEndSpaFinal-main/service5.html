@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <link rel="stylesheet" href="servicedescriptionandinfo.css">
+
+</head>
+<body>
+<main class="page">
+    <!-- PRODUCT DESCRIPTION -->
+    <section class="product card">
+      <img class="product-img" src="images/sig.jpg" alt="signatureservice">
+
+      <div class="product-info">
+        <h1 class="product-title">Nature's Foot Spa Signature</h1>
+        <p class="product-tagline">Nature's Foot Spa Signature Service</p>
+
+        <p class="product-desc">
+          This service is designed to help strengthen the muscles, ligaments, 
+      and tendons in your feet improving their overall health, stability, and flexibility. 
+      Experience enhanced balance, reduced fatigue, and long-term foot wellness with our 
+      targeted approach.
+
+
+        <div class="price-row">
+          <div class="price">₱SAMPLE PRICE</div>
+        </div>
+        <button class="buy-btn">BOOK SERVICE</button>
+      </div>
+    </section>
+
+    <!-- DATE PICKER (SEPARATE) -->
+    <section class="datepicker card" aria-labelledby="pickerHeading">
+      <h2 id="booking-information">Booking Information</h2>
+      <p class="small">Please enter your full name and select your preferred date. Available dates are weekdays only.</p>
+
+      <form id="dateForm" class="date-form">
+        <!-- NEW INPUT FIELD FOR FULL NAME -->
+        <label for="clientName">Full Name</label>
+        <input id="clientName" name="clientName" type="text" placeholder="Enter your full name" required>
+
+        <label for="demoDate">Pick a date</label>
+        <input id="demoDate" name="demoDate" type="date" required>
+
+        <label for="demoTime">Preferred time (optional)</label>
+        <input id="demoTime" name="demoTime" type="time">
+
+        <div class="form-actions">
+          <button type="submit" class="btn">Save</button>
+          <button type="button" id="clearBtn" class="btn ghost">Clear</button>
+        </div>
+
+        <p id="chosen" class="chosen" aria-live="polite"></p>
+      </form>
+    </section>
+  </main>
+
+  <script>
+    const demoDate = document.getElementById('demoDate');
+    const demoTime = document.getElementById('demoTime');
+    const clientName = document.getElementById('clientName');
+    const chosen = document.getElementById('chosen');
+    const form = document.getElementById('dateForm');
+    const clearBtn = document.getElementById('clearBtn');
+
+    demoDate.addEventListener('change', () => {
+      const d = new Date(demoDate.value);
+      if (!demoDate.value) return;
+      const day = d.getDay(); // 0 = Sunday, 6 = Saturday
+      if (day === 0 || day === 6) {
+        alert('Please select a weekday (Monday to Friday).');
+        demoDate.value = '';
+        chosen.textContent = '';
+        return;
+      }
+      updateChosen();
+    });
+
+    demoTime.addEventListener('change', updateChosen);
+
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      if (!clientName.value.trim()) {
+        alert('Please enter your full name.');
+        return;
+      }
+      if (!demoDate.value) {
+        alert('Please pick a date.');
+        return;
+      }
+      alert('Thank you, ' + clientName.value + '! Your date (' + chosen.textContent + ') has been saved.');
+    });
+
+    clearBtn.addEventListener('click', () => {
+      clientName.value = '';
+      demoDate.value = '';
+      demoTime.value = '';
+      chosen.textContent = '';
+    });
+
+    function updateChosen() {
+      if (!demoDate.value) {
+        chosen.textContent = '';
+        return;
+      }
+      const d = new Date(demoDate.value + (demoTime.value ? 'T' + demoTime.value : ''));
+      const humanDate = d.toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+      const humanTime = demoTime.value ? ' at ' + demoTime.value : '';
+      chosen.textContent = humanDate + humanTime;
+    }
+  </script>
+
+</body>
+</html>

@@ -6,11 +6,11 @@
 
 body {
   font-family:'Times New Roman', Times, serif;
-}
+  background-image: linear-gradient(120deg, #fdfbfb 0%, #ebedee 100%);}
 
 /* Navigation Bar */
 .navbar {
-  background-color: #dfd8c5;
+  background-image: linear-gradient(to right, #43e97b 0%, #38f9d7 100%); 
   box-shadow: 0 2px 6px rgba(0,0,0,0.1);
   position: sticky;
   top: 0;
@@ -55,13 +55,12 @@ body {
   border-bottom: 2px solid #fffaf6;
   padding-bottom: 3px;
 }
-/* Booking Section wrapper */
 .booking-section {
     text-align: center;
     margin: 40px 0;
 }
 
-/* Layout for booking options */
+/* Grid Layout */
 .booking-options {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); 
@@ -70,7 +69,7 @@ body {
     margin: auto;
 }
 
-/* Each booking card */
+/* Booking Card */
 .booking-card {
     background: #ffffff;
     border-radius: 12px;
@@ -80,17 +79,40 @@ body {
     flex-direction: column;
     align-items: center;
     text-align: center;
+    transition: transform 0.3s ease;
 }
-.booking-card :hover{
+
+.booking-card:hover {
    transform: translateY(-5px);
 }
 
-/* Images inside booking cards */
+/* Card Image */
 .booking-card img {
     width: 100%;
     height: 150px;
     border-radius: 10px;
     margin-bottom: 10px;
+    object-fit: cover;
+}
+
+/* Button */
+.confirm-btn {
+    padding: 10px;
+    background-color: #dfd8c5;
+    color: white;
+    font-weight: bold;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: 0.3s;
+    text-decoration: none;
+    width: 100%;
+    display: inline-block;
+}
+
+.confirm-btn:hover {
+    background-color: #c8bfa8;
+    transform: translateY(-5px);
 }
   
 /* Title */
@@ -111,7 +133,7 @@ body {
 /* Book button */
 .confirm-btn {
     padding: 10px;
-    background-color: #dfd8c5;
+    background-color: #71c071;
     color: white;
     font-weight: bold;
     border: none;
@@ -139,7 +161,8 @@ body {
     width: 100%;
     height: 450px;
     object-fit:cover;
-    border-bottom: 5px solid #dfd8c5;
+    border-bottom: 5px solid #57c057;
+
 }
 .welcome-text {
     position: absolute;
@@ -163,7 +186,7 @@ body {
   display: flex;
   margin:none;
   gap: 40px;
-  border-top: 5px solid #d3bf80;
+  border-top: 5px solid #57c057;
 }
 
 /* Left Section */
@@ -173,13 +196,13 @@ body {
 }
 
 .contact-info h2 {
-  color: #b48a00;
+  color: #57c057;
   margin-bottom: 15px;
 }
 
 .contact-info p {
   margin-bottom: 20px;
-  line-height: 1.6;
+  line-height: 1;
 }
 
 .contact-item {
@@ -192,7 +215,7 @@ body {
 /* Right Section */
 .contact-form {
   flex: 1;
-  background: #fffaf6;  
+  background: #eceae8;  
   padding: 20px;
   border-radius: 8px;
   box-shadow: 0 2px 8px rgba(0,0,0,0.1);
