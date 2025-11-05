@@ -18,7 +18,7 @@ const bookingRepository = {
       INSERT INTO bookings (USER_ID, SERVICE_ID, BOOKING_DATE, BOOKING_TIME, STATUS_ID)
       VALUES (?, ?, ?, ?, ?)
     `;
-    const result = await promisifyQuery(sql, [user_id, service_id, booking_date, booking_time, status_id]);
+    const result = await promisifyQuery(sql, [user_id, service_id, booking_date, booking_time, status_name]);
     return result.insertId;
   },
 
