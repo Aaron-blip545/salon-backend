@@ -11,11 +11,7 @@ const bookingService = {
       throw new ApiError(409, 'Time slot already booked');
     }
 
-     //Validate booking time is within business hours
-     
-    // if (!BUSINESS_HOURS.includes(booking_time)) {
-    //    throw new ApiError(400, 'Invalid booking time. Please choose from available slots.');
-    //  }
+  
 
     // Create booking
     const bookingId = await bookingRepository.create({

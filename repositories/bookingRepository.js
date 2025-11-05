@@ -10,15 +10,15 @@ const bookingRepository = {
   },
 
   // Create new booking
-  create: async ({ user_id, service_id, booking_date, status_name }) => {
+  create: async ({ user_id, service_id, booking_date, booking_time, status_name }) => {
     // Get status ID
     const status_id = await bookingRepository.getStatusId(status_name);
     
     const sql = `
-      INSERT INTO bookings (USER_ID, SERVICE_ID, BOOKING_DATE, STATUS_ID)
-      VALUES (?, ?, ?, ?)
+      INSERT INTO bookings (USER_ID, SERVICE_ID, BOOKING_DATE, BOOKING_TIME, STATUS_ID)
+      VALUES (?, ?, ?, ?, ?)
     `;
-    const result = await promisifyQuery(sql, [user_id, service_id, booking_date, status_id]);
+    const result = await promisifyQuery(sql, [user_id, service_id, booking_date, booking_time, status_id]);
     return result.insertId;
   },
 
@@ -31,6 +31,7 @@ const bookingRepository = {
         b.USER_ID,
         b.SERVICE_ID,
         b.BOOKING_DATE,
+        b.BOOKING_TIME,
         b.CREATED_AT,
         bs.STATUS_NAME
       FROM bookings b
@@ -116,7 +117,7 @@ const bookingRepository = {
       FROM bookings b
       JOIN bookingstatus bs ON b.STATUS_ID = bs.STATUS_ID
       WHERE b.BOOKING_DATE = ?
-      AND b.BOOKINTG_TIME = ?
+      AND b.BOOKING_TIME = ?
       AND bs.STATUS_NAME IN ('pending', 'confirmed')
     `;
     const results = await promisifyQuery(sql, [booking_date, booking_time]);

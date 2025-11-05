@@ -35,27 +35,47 @@
           </div>
         </form>
         <script>
-          const form = document.querySelector("form");
-          form.addEventListener("submit", async (e) => {
+          const loginForm = document.querySelector("form");
+          // const loginButton = document.getElementById("LoginButton");
+
+          loginForm.addEventListener("submit", async (e) => {
             e.preventDefault();
-            const formData = new FormData(form);
-            const response = await fetch(
-              "http://localhost:3000/api/auth/login",
-              {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                  email_address: formData.get("username"),
-                  password: formData.get("password"),
-                }),
+
+            const email = document.getElementById("username").value;
+            const password = document.getElementById("password").value;
+
+            try {
+              const response = await fetch(
+                "http://localhost:3000/api/auth/login",
+                {
+                  method: "POST",
+                  headers: {
+                    "Content-Type": "application/json",
+                  },
+                  body: JSON.stringify({
+                    email_address: email,
+                    password: password,
+                  }),
+                }
+              );
+
+              const data = await response.json();
+
+              if (!response.ok) {
+                throw new Error(data.message || "Login failed");
               }
-            );
-            const result = await response.json();
-            if (result.success) {
-              alert("Login successful");
+
+              // store token if provided by API
+              const token = data.token || (data.data && data.data.token);
+              if (token) {
+                localStorage.setItem("token", token);
+              }
+
+              alert(data.message || "Login successful");
               window.location.href = "MainPage.html";
-            } else {
-              alert("Login failed: " + result.message);
+            } catch (err) {
+              console.error(err);
+              alert(err.message || "An error occurred while logging in");
             }
           });
         </script>

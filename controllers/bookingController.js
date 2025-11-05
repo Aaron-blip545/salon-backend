@@ -1,3 +1,4 @@
+const { isTimeSlotAvailable } = require('../repositories/bookingRepository');
 const bookingService = require('../services/bookingService');
 const ApiError = require('../utils/ApiError');
 
@@ -5,25 +6,28 @@ const bookingController = {
   // Create new booking
   createBooking: async (req, res, next) => {
     try {
-      const { service_id, booking_date, booking_time } = req.body;
+      const { service_id, booking_date, booking_time} = req.body;
       const user_id = req.user.id;
 
        //Validate required fields
-      if (!service_id || !booking_date || !booking_time) {
+      if (!service_id || !booking_date ||! booking_time) {
         throw new ApiError(400, 'Service, date, and time are required');
      }
-
+      if (!isTimeSlotAvailable(booking_date, booking_time)) {
+        throw new ApiError(400, 'The selected time slot has been already booked');
+      }
+      
       const result = await bookingService.createBooking({
         user_id,
         service_id,
         booking_date,
-        booking_time   
+        booking_time  
       });
 
       res.status(201).json({
         success: true,
         message: result.message,
-        data: { booking_id: result.booking_id }
+        data: { booking_id: result.booking_id, booking_time: result.booking_time }
       });
     } catch (error) {
       next(error);

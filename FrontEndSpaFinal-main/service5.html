@@ -1,116 +1,178 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Document</title>
-    <link rel="stylesheet" href="servicedescriptionandinfo.css">
+    <link rel="stylesheet" href="servicedescriptionandinfo.css" />
+  </head>
+  <body>
+    <main class="page">
+      <!-- PRODUCT DESCRIPTION -->
+      <section class="product card">
+        <img class="product-img" src="images/sig.jpg" alt="signatureservice" />
 
-</head>
-<body>
-<main class="page">
-    <!-- PRODUCT DESCRIPTION -->
-    <section class="product card">
-      <img class="product-img" src="images/sig.jpg" alt="signatureservice">
+        <div class="product-info">
+          <h1 class="product-title">Nature's Foot Spa Signature</h1>
+          <p class="product-tagline">Nature's Foot Spa Signature Service</p>
 
-      <div class="product-info">
-        <h1 class="product-title">Nature's Foot Spa Signature</h1>
-        <p class="product-tagline">Nature's Foot Spa Signature Service</p>
+          <p class="product-desc">
+            This service is designed to help strengthen the muscles, ligaments,
+            and tendons in your feet improving their overall health, stability,
+            and flexibility. Experience enhanced balance, reduced fatigue, and
+            long-term foot wellness with our targeted approach.
+          </p>
 
-        <p class="product-desc">
-          This service is designed to help strengthen the muscles, ligaments, 
-      and tendons in your feet improving their overall health, stability, and flexibility. 
-      Experience enhanced balance, reduced fatigue, and long-term foot wellness with our 
-      targeted approach.
-
-
-        <div class="price-row">
-          <div class="price">₱SAMPLE PRICE</div>
+          <div class="price-row">
+            <div class="price">₱SAMPLE PRICE</div>
+          </div>
         </div>
-        <button class="buy-btn">BOOK SERVICE</button>
-      </div>
-    </section>
+      </section>
 
-    <!-- DATE PICKER (SEPARATE) -->
-    <section class="datepicker card" aria-labelledby="pickerHeading">
-      <h2 id="booking-information">Booking Information</h2>
-      <p class="small">Please enter your full name and select your preferred date. Available dates are weekdays only.</p>
+      <!-- DATE PICKER (SEPARATE) -->
+      <section class="datepicker card" aria-labelledby="pickerHeading">
+        <h2 id="booking-information">Booking Information</h2>
+        <p class="small">
+          Please enter your full name and select your preferred date. Available
+          dates are weekdays only.
+        </p>
 
-      <form id="dateForm" class="date-form">
-        <!-- NEW INPUT FIELD FOR FULL NAME -->
-        <label for="clientName">Full Name</label>
-        <input id="clientName" name="clientName" type="text" placeholder="Enter your full name" required>
+        <form id="dateForm" class="date-form">
+          <label for="bookDate">Pick a date</label>
+          <input id="bookDate" name="bookDate" type="date" required />
 
-        <label for="demoDate">Pick a date</label>
-        <input id="demoDate" name="demoDate" type="date" required>
+          <label for="bookTime">Preferred time (optional)</label>
+          <input id="bookTime" name="bookingTime" type="time" />
 
-        <label for="demoTime">Preferred time (optional)</label>
-        <input id="demoTime" name="demoTime" type="time">
+          <div class="form-actions">
+            <button id="clearBtm" type="button" class="clearBtn">Clear</button>
+            <button type="submit" class="btn">Book</button>
+          </div>
 
-        <div class="form-actions">
-          <button type="submit" class="btn">Save</button>
-          <button type="button" id="clearBtn" class="btn ghost">Clear</button>
-        </div>
+          <p id="chosen" class="chosen" aria-live="polite"></p>
+        </form>
+      </section>
+    </main>
 
-        <p id="chosen" class="chosen" aria-live="polite"></p>
-      </form>
-    </section>
-  </main>
+    <script>
+      const bookingDate = document.getElementById("bookDate");
+      const bookingTime = document.getElementById("bookTime");
+      const chosen = document.getElementById("chosen");
+      const form = document.getElementById("dateForm");
+      const clearBtn = document.getElementById("clearBtm");
+      const token = localStorage.getItem("token");
 
-  <script>
-    const demoDate = document.getElementById('demoDate');
-    const demoTime = document.getElementById('demoTime');
-    const clientName = document.getElementById('clientName');
-    const chosen = document.getElementById('chosen');
-    const form = document.getElementById('dateForm');
-    const clearBtn = document.getElementById('clearBtn');
+      // When date changes, validate weekday and update chosen display
+      bookingDate.addEventListener("change", () => {
+        if (!bookingDate.value) {
+          chosen.textContent = "";
+          return;
+        }
+        const date = new Date(bookingDate.value);
+        const day = date.getDay(); // 0 = Sunday, 6 = Saturday
+        if (day === 0 || day === 6) {
+          alert("Please select a weekday (Monday to Friday).");
+          bookingDate.value = "";
+          chosen.textContent = "";
+          return;
+        }
+        updateChosen();
+      });
 
-    demoDate.addEventListener('change', () => {
-      const d = new Date(demoDate.value);
-      if (!demoDate.value) return;
-      const day = d.getDay(); // 0 = Sunday, 6 = Saturday
-      if (day === 0 || day === 6) {
-        alert('Please select a weekday (Monday to Friday).');
-        demoDate.value = '';
-        chosen.textContent = '';
-        return;
+      // Update chosen when either field changes
+      bookingTime.addEventListener("change", updateChosen);
+
+      clearBtn.addEventListener("click", () => {
+        bookingDate.value = "";
+        bookingTime.value = "";
+        chosen.textContent = "";
+      });
+
+      function updateChosen() {
+        const dateInput = document.getElementById("bookDate").value;
+        const timeInput = document.getElementById("bookTime").value;
+        const chosenBox = document.getElementById("chosen");
+
+        if (dateInput && timeInput) {
+          // Combine: "2025-11-10 14:00"
+          const combined = `${dateInput} ${timeInput}`;
+
+          // Store in data attribute
+          chosenBox.dataset.datetime = combined;
+
+          // Display human-readable
+          const date = new Date(combined);
+          const humanDate = date.toLocaleDateString("en-US", {
+            weekday: "long",
+            year: "numeric",
+            month: "long",
+            day: "numeric",
+          });
+          const humanTime = date.toLocaleTimeString("en-US", {
+            hour: "2-digit",
+            minute: "2-digit",
+          });
+
+          chosenBox.textContent = `You have chosen: ${humanDate} at ${humanTime}`;
+        } else {
+          chosenBox.textContent = "";
+        }
       }
-      updateChosen();
-    });
 
-    demoTime.addEventListener('change', updateChosen);
+      // Save booking
+      form.addEventListener("submit", async (e) => {
+        e.preventDefault();
 
-    form.addEventListener('submit', (e) => {
-      e.preventDefault();
-      if (!clientName.value.trim()) {
-        alert('Please enter your full name.');
-        return;
-      }
-      if (!demoDate.value) {
-        alert('Please pick a date.');
-        return;
-      }
-      alert('Thank you, ' + clientName.value + '! Your date (' + chosen.textContent + ') has been saved.');
-    });
+        const date = document.getElementById("bookDate").value;
+        const time = document.getElementById("bookTime").value;
 
-    clearBtn.addEventListener('click', () => {
-      clientName.value = '';
-      demoDate.value = '';
-      demoTime.value = '';
-      chosen.textContent = '';
-    });
+        if (!date) {
+          alert("Please select date first!");
+          return;
+        }
+        if (!time) {
+          alert("Please select time first!");
+          return;
+        }
 
-    function updateChosen() {
-      if (!demoDate.value) {
-        chosen.textContent = '';
-        return;
-      }
-      const d = new Date(demoDate.value + (demoTime.value ? 'T' + demoTime.value : ''));
-      const humanDate = d.toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-      const humanTime = demoTime.value ? ' at ' + demoTime.value : '';
-      chosen.textContent = humanDate + humanTime;
-    }
-  </script>
+        const token = localStorage.getItem("token");
+        if (!token) {
+          alert("Please login first!");
+          window.location.href = "login.html";
+          return;
+        }
 
-</body>
+        const bookingData = {
+          service_id: 1,
+          booking_date: date,
+          booking_time: time + ":00",
+        };
+
+        console.log("Sending:", bookingData);
+
+        try {
+          const response = await fetch("http://localhost:3000/api/bookings", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify(bookingData),
+          });
+
+          const data = await response.json();
+
+          if (data.success) {
+            alert("✅ Booking created successfully!");
+            window.location.href = "my-bookings.html";
+          } else {
+            alert("❌ Error: " + data.message);
+          }
+        } catch (error) {
+          console.error("Error:", error);
+          alert("❌ Network error: " + error.message);
+        }
+      });
+    </script>
+  </body>
 </html>
