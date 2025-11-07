@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
-const transactionController = require('../controllers/transactionController');
+const transasctionController = require('../controllers/transactionController');
+const { authenticateToken } = require('../middleware/auth');
 
-// POST /api/transactions/create
-router.post('/create', transactionController.createTransaction);
+//Protected routes (require authenticaiton)
+router.post('/:id/createTransaction', authenticateToken, transasctionController.createTransaction);

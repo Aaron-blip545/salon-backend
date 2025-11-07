@@ -6,7 +6,7 @@ const bookingController = {
   // Create new booking
   createBooking: async (req, res, next) => {
     try {
-      const { service_id, booking_date, booking_time} = req.body;
+      const { service_id, booking_date, booking_time, status_name} = req.body;
       const user_id = req.user.id;
 
        //Validate required fields
@@ -21,13 +21,14 @@ const bookingController = {
         user_id,
         service_id,
         booking_date,
-        booking_time  
+        booking_time, 
+        status_name: 'pending' 
       });
 
       res.status(201).json({
         success: true,
         message: result.message,
-        data: { booking_id: result.booking_id, booking_time: result.booking_time }
+        data: { booking_id: result.booking_id, booking_time: result.booking_time, booking_date: result.booking_date, service_id: result.service_id, user_id: result.user_id, status_name: result.status_name }
       });
     } catch (error) {
       next(error);

@@ -22,6 +22,7 @@ app.use(bodyParser.json());
 app.use('/api/auth', authRoutes);
 app.use('/api/bookings', bookingRoutes);
 app.use('/api/services', serviceRoutes);
+app.use('/api/transactions', require('./routes/transactionRoute'));
 
 // Health check
 app.get('/health', (req, res) => {
