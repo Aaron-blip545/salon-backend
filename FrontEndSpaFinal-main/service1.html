@@ -3,178 +3,284 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Document</title>
+    <title>Book Service - Nature's Foot Spa</title>
     <link rel="stylesheet" href="servicedescriptionandinfo.css" />
   </head>
   <body>
-    <main class="page">
-      <!-- PRODUCT DESCRIPTION -->
-      <section class="product card">
-        <img class="product-img" src="images/sig.jpg" alt="signatureservice" />
-
-        <div class="product-info">
-          <h1 class="product-title">Nature's Foot Spa Signature</h1>
-          <p class="product-tagline">Nature's Foot Spa Signature Service</p>
-
-          <p class="product-desc">
-            This service is designed to help strengthen the muscles, ligaments,
-            and tendons in your feet improving their overall health, stability,
-            and flexibility. Experience enhanced balance, reduced fatigue, and
-            long-term foot wellness with our targeted approach.
-          </p>
-
-          <div class="price-row">
-            <div class="price">₱SAMPLE PRICE</div>
-          </div>
-        </div>
-      </section>
-
-      <!-- DATE PICKER (SEPARATE) -->
-      <section class="datepicker card" aria-labelledby="pickerHeading">
-        <h2 id="booking-information">Booking Information</h2>
-        <p class="small">
-          Please enter your full name and select your preferred date. Available
-          dates are weekdays only.
-        </p>
-
-        <form id="dateForm" class="date-form">
-          <label for="bookDate">Pick a date</label>
-          <input id="bookDate" name="bookDate" type="date" required />
-
-          <label for="bookTime">Preferred time (optional)</label>
-          <input id="bookTime" name="bookingTime" type="time" />
-
-          <div class="form-actions">
-            <button id="clearBtm" type="button" class="clearBtn">Clear</button>
-            <button type="submit" class="btn">Book</button>
-          </div>
-
-          <p id="chosen" class="chosen" aria-live="polite"></p>
-        </form>
+    <main class="page" id="mainContent">
+      <!-- LOADING STATE -->
+      <section class="card loading" id="loadingState">
+        <p>Loading service details...</p>
       </section>
     </main>
 
     <script>
-      const bookingDate = document.getElementById("bookDate");
-      const bookingTime = document.getElementById("bookTime");
-      const chosen = document.getElementById("chosen");
-      const form = document.getElementById("dateForm");
-      const clearBtn = document.getElementById("clearBtm");
-      const token = localStorage.getItem("token");
+      const API_BASE = "http://localhost:3000/api";
+      let currentService = null;
 
-      // When date changes, validate weekday and update chosen display
-      bookingDate.addEventListener("change", () => {
-        if (!bookingDate.value) {
-          chosen.textContent = "";
+      // Get service_id from URL parameter
+      function getServiceIdFromURL() {
+        const params = new URLSearchParams(window.location.search);
+        return params.get("service_id");
+      }
+
+      // Load service details
+      async function loadServiceDetails() {
+        const serviceId = getServiceIdFromURL();
+
+        console.log("Loading service ID:", serviceId);
+
+        if (!serviceId) {
+          showError(
+            "No service selected. Please go back and select a service."
+          );
           return;
         }
-        const date = new Date(bookingDate.value);
-        const day = date.getDay(); // 0 = Sunday, 6 = Saturday
-        if (day === 0 || day === 6) {
-          alert("Please select a weekday (Monday to Friday).");
-          bookingDate.value = "";
-          chosen.textContent = "";
-          return;
-        }
-        updateChosen();
-      });
 
-      // Update chosen when either field changes
-      bookingTime.addEventListener("change", updateChosen);
+        try {
+          console.log("Fetching from:", `${API_BASE}/services`);
 
-      clearBtn.addEventListener("click", () => {
-        bookingDate.value = "";
-        bookingTime.value = "";
-        chosen.textContent = "";
-      });
+          const response = await fetch(`${API_BASE}/services`);
 
-      function updateChosen() {
-        const dateInput = document.getElementById("bookDate").value;
-        const timeInput = document.getElementById("bookTime").value;
-        const chosenBox = document.getElementById("chosen");
+          console.log("Response status:", response.status);
 
-        if (dateInput && timeInput) {
-          // Combine: "2025-11-10 14:00"
-          const combined = `${dateInput} ${timeInput}`;
+          const data = await response.json();
 
-          // Store in data attribute
-          chosenBox.dataset.datetime = combined;
+          console.log("Response data:", data);
 
-          // Display human-readable
-          const date = new Date(combined);
-          const humanDate = date.toLocaleDateString("en-US", {
-            weekday: "long",
-            year: "numeric",
-            month: "long",
-            day: "numeric",
-          });
-          const humanTime = date.toLocaleTimeString("en-US", {
-            hour: "2-digit",
-            minute: "2-digit",
-          });
+          if (data.success && data.data && data.data.length > 0) {
+            // Find the specific service
+            const service = data.data.find((s) => s.SERVICE_ID == serviceId);
 
-          chosenBox.textContent = `You have chosen: ${humanDate} at ${humanTime}`;
-        } else {
-          chosenBox.textContent = "";
+            console.log("Found service:", service);
+
+            if (service) {
+              currentService = service;
+              displayService(service);
+            } else {
+              showError(
+                `Service with ID ${serviceId} not found. Please go back and select a valid service.`
+              );
+            }
+          } else {
+            showError("No services available. Please contact support.");
+          }
+        } catch (error) {
+          console.error("Fetch error:", error);
+          showError(
+            "Connection error: " +
+              error.message +
+              ". Make sure the backend server is running on localhost:3000"
+          );
         }
       }
 
-      // Save booking
-      form.addEventListener("submit", async (e) => {
-        e.preventDefault();
+      // Display service details
+      function displayService(service) {
+        const mainContent = document.getElementById("mainContent");
+        mainContent.innerHTML = `
+                <!-- PRODUCT DESCRIPTION -->
+                <section class="product card">
+                    <img class="product-img" 
+                         src="images/service-${service.SERVICE_ID}.jpg" 
+                         alt="${service.SERVICE_NAME}"
+                         onerror="this.src='images/sig.jpg'" />
 
-        const date = document.getElementById("bookDate").value;
-        const time = document.getElementById("bookTime").value;
+                    <div class="product-info">
+                        <h1 class="product-title">${service.SERVICE_NAME}</h1>
+                        <p class="product-tagline">${
+                          service.SERVICE_NAME
+                        } Service</p>
 
-        if (!date) {
-          alert("Please select date first!");
-          return;
+                        <p class="product-desc">
+                            ${
+                              service.DESCRIPTION ||
+                              "Experience professional service tailored to your needs. Our expert team provides quality care with attention to detail."
+                            }
+                        </p>
+
+                        <div class="price-row">
+                            <div class="price">₱${parseFloat(
+                              service.PRICE
+                            ).toFixed(2)}</div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- DATE PICKER -->
+                <section class="datepicker card" aria-labelledby="booking-information">
+                    <h2 id="booking-information">Booking Information</h2>
+                    <p class="small">
+                        Please select your preferred date and time. Available dates are weekdays only.
+                    </p>
+
+                    <form id="dateForm" class="date-form">
+                        <label for="bookDate">Pick a date</label>
+                        <input id="bookDate" name="bookDate" type="date" required />
+
+                        <label for="bookTime">Preferred time (optional)</label>
+                        <input id="bookTime" name="bookingTime" type="time" />
+
+                        <div class="form-actions">
+                            <button id="clearBtn" type="button" class="clearBtn">Clear</button>
+                            <button type="submit" class="btn">Book</button>
+                        </div>
+
+                        <p id="chosen" class="chosen" aria-live="polite"></p>
+                    </form>
+                </section>
+            `;
+
+        // Initialize form handlers after content is loaded
+        initializeFormHandlers();
+      }
+
+      // Show error message
+      function showError(message) {
+        const mainContent = document.getElementById("mainContent");
+        mainContent.innerHTML = `
+                <section class="card" style="text-align: center; padding: 40px;">
+                    <h3 style="color: #dc3545; margin-bottom: 20px;">⚠️ Error</h3>
+                    <p style="margin-bottom: 30px;">${message}</p>
+                    <a href="index.html" class="btn" style="display: inline-block; text-decoration: none;">
+                        Go Back to Home
+                    </a>
+                </section>
+            `;
+      }
+
+      // Initialize form event handlers
+      function initializeFormHandlers() {
+        const bookingDate = document.getElementById("bookDate");
+        const bookingTime = document.getElementById("bookTime");
+        const chosen = document.getElementById("chosen");
+        const form = document.getElementById("dateForm");
+        const clearBtn = document.getElementById("clearBtn");
+
+        // Set minimum date to today
+        const today = new Date().toISOString().split("T")[0];
+        bookingDate.setAttribute("min", today);
+
+        // Validate weekday when date changes
+        bookingDate.addEventListener("change", () => {
+          if (!bookingDate.value) {
+            chosen.textContent = "";
+            return;
+          }
+
+          const date = new Date(bookingDate.value + "T00:00:00");
+          const day = date.getDay(); // 0 = Sunday, 6 = Saturday
+
+          if (day === 0 || day === 6) {
+            alert("Please select a weekday (Monday to Friday).");
+            bookingDate.value = "";
+            chosen.textContent = "";
+            return;
+          }
+
+          updateChosen();
+        });
+
+        // Update chosen display when time changes
+        bookingTime.addEventListener("change", updateChosen);
+
+        // Clear button
+        clearBtn.addEventListener("click", () => {
+          bookingDate.value = "";
+          bookingTime.value = "";
+          chosen.textContent = "";
+        });
+
+        // Update chosen display
+        function updateChosen() {
+          const dateInput = bookingDate.value;
+          const timeInput = bookingTime.value;
+
+          if (dateInput && timeInput) {
+            const combined = `${dateInput} ${timeInput}`;
+            chosen.dataset.datetime = combined;
+
+            const date = new Date(combined);
+            const humanDate = date.toLocaleDateString("en-US", {
+              weekday: "long",
+              year: "numeric",
+              month: "long",
+              day: "numeric",
+            });
+            const humanTime = date.toLocaleTimeString("en-US", {
+              hour: "2-digit",
+              minute: "2-digit",
+            });
+
+            chosen.textContent = `You have chosen: ${humanDate} at ${humanTime}`;
+          } else {
+            chosen.textContent = "";
+          }
         }
-        if (!time) {
-          alert("Please select time first!");
-          return;
-        }
 
-        const token = localStorage.getItem("token");
-        if (!token) {
-          alert("Please login first!");
-          window.location.href = "login.html";
-          return;
-        }
+        // Handle form submission
+        form.addEventListener("submit", async (e) => {
+          e.preventDefault();
 
-        const bookingData = {
-          service_id: 1,
-          booking_date: date,
-          booking_time: time + ":00",
-        };
+          const date = bookingDate.value;
+          const time = bookingTime.value;
 
-        console.log("Sending:", bookingData);
+          // Validate inputs
+          if (!date) {
+            alert("Please select a date first!");
+            return;
+          }
+          if (!time) {
+            alert("Please select a time first!");
+            return;
+          }
 
-        try {
-          const response = await fetch(
-            "http://localhost:3000/api/bookings/:id/booking",
-            {
+          // Check if user is logged in
+          const token = localStorage.getItem("token");
+          if (!token) {
+            alert("Please login first to book a service!");
+            window.location.href = "Login.html";
+            return;
+          }
+
+          // Prepare booking data
+          const bookingData = {
+            service_id: currentService.SERVICE_ID,
+            booking_date: date,
+            booking_time: time + ":00",
+          };
+
+          console.log("Sending booking:", bookingData);
+
+          try {
+            const response = await fetch(`${API_BASE}/bookings`, {
               method: "POST",
               headers: {
                 "Content-Type": "application/json",
                 Authorization: `Bearer ${token}`,
               },
               body: JSON.stringify(bookingData),
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+              alert("✅ Booking created successfully! Proceed to payment.");
+              // Redirect to payment page
+              window.location.href = "paymentmethod.html";
+            } else {
+              alert("❌ Error: " + data.message);
             }
-          );
-
-          const data = await response.json();
-
-          if (data.success) {
-            alert("Booking is pending, proceed to payment.");
-            window.location.href = "paymentmethod.html";
-          } else {
-            alert("❌ Error: " + data.message);
+          } catch (error) {
+            console.error("Booking error:", error);
+            alert("❌ Network error: " + error.message);
           }
-        } catch (error) {
-          console.error("Error:", error);
-          alert("❌ Network error: " + error.message);
-        }
+        });
+      }
+
+      // Load service when page loads
+      window.addEventListener("DOMContentLoaded", () => {
+        loadServiceDetails();
       });
     </script>
   </body>

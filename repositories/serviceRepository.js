@@ -16,9 +16,9 @@ const serviceRepository = {
   },
 
   // Create new service
-  addService: async ({ name, description, price, duration }) => {
+  addService: async ({ service_name, description, price, duration }) => {
     const sql = `INSERT INTO SERVICES (NAME, DESCRIPTION, PRICE, DURATION, IS_ACTIVE) VALUES (?, ?, ?, ?, 1)`;
-    const result = await promisifyQuery(sql, [name, description, price, duration]);
+    const result = await promisifyQuery(sql, [service_name, description, price, duration]);
     return result.insertId;
   }
 };

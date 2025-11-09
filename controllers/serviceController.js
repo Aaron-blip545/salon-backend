@@ -4,7 +4,7 @@ const serviceController = {
   // Get all services
   getAllServices: async (req, res, next) => {
     try {
-      const services = await serviceService.getAllServices();
+      const services = await serviceService.getAllActiveServices();
 
       res.json({
         success: true,
@@ -42,9 +42,9 @@ const serviceController = {
   // Create new service (Admin only)
   createService: async (req, res, next) => {
     try {
-      const { name, description, price, duration } = req.body;
+      const { service_name, description, price, duration } = req.body;
 
-      if (!name || !price) {
+      if (!service_name || !price) {
         return res.status(400).json({
           success: false,
           message: 'Name and price are required'
@@ -52,7 +52,7 @@ const serviceController = {
       }
 
       const result = await serviceService.createServices({
-        name,
+        service_name,
         description,
         price,
         duration

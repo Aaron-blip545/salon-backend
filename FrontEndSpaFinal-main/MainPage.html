@@ -1,137 +1,135 @@
 <!DOCTYPE html>
 <html>
-    <head>
-        <title>NFS</title>
-        <link rel="stylesheet" href="loader.css">
-        <link rel="stylesheet" href="MainPage.css">
+  <head>
+    <title>NFS</title>
+    <link rel="stylesheet" href="loader.css" />
+    <link rel="stylesheet" href="MainPage.css" />
 
-       <style type="text/css">
-       </style>
-
-    </head>
-    <body>
-
-                <nav class="navbar">
-        <div class="navdiv">
-            <div class="logo"><a href="index.html">Nature Foot Spa</a></div>
-            <ul>
-                <li><a href="#home">Home</a></li>
-                <li><a href="#booking-sections">Book Now</a></li>
-                <li><a href="#contact-us">Contact</a></li>
-                <li><a href="aboutus.html">About Us</a></li>
-                <li><a href="Login.html">Profile</a></li>
-            </ul>
-        </div>
-    </nav>    
+    <style type="text/css"></style>
+  </head>
+  <body>
+    <nav class="navbar">
+      <div class="navdiv">
+        <div class="logo"><a href="index.html">Nature Foot Spa</a></div>
+        <ul>
+          <li><a href="#home">Home</a></li>
+          <li><a href="#booking-sections">Book Now</a></li>
+          <li><a href="#contact-us">Contact</a></li>
+          <li><a href="aboutus.html">About Us</a></li>
+          <li><a href="Login.html">Profile</a></li>
+        </ul>
+      </div>
+    </nav>
     <!--Transition effect for services-->
     <main data-router-wrapper>
       <section data-router-view="home" class="home">
-        <div class="home-content">
-        </div>
+        <div class="home-content"></div>
       </section>
     </main>
 
     <!-- Welcome Banner -->
-<div class="welcome-banner" id="home">
-    <img src="images/welcomeimg.png" alt="Welcome Image">
-    <div class="welcome-text">
+    <div class="welcome-banner" id="home">
+      <img src="images/welcomeimg.png" alt="Welcome Image" />
+      <div class="welcome-text">
         <h1>Welcome to Nature's Foot Spa</h1>
         <p>Relax, refresh, and rejuvenate with our signature treatments.</p>
-    </div>
-</div>
-          <section class="booking-section" id="booking-sections">
-    <h1><strong>Book Your Appointment</strong></h1>
-    <p>Select your preferred service, date, and time.</p>
-
-    
- <div class="booking-options">
-
-            <!-- Service 1 -->
-            <div class="booking-card">
-                <img src="images/hotstone.png" alt="Hot Stone Massage">
-                <h3>Hot Stone Massage</h3>
-                <p><strong>60 min</strong></p>
-                <a href="service1.html" class="confirm-btn">Book Now</a>
-            </div>
-
-            <!-- Service 2 -->
-            <div class="booking-card">
-                <img src="images/footsoak.png" alt="Aromatherapy Foot Soak">
-                <h3>Aromatherapy Foot Soak</h3>
-                <p><strong>30 min</strong></p>
-                <a href="datepicker.html" class="confirm-btn">Book Now</a>
-            </div>
-
-            <!-- Service 3 -->
-            <div class="booking-card">
-                <img src="images/reflexology.png" alt="Reflexology">
-                <h3>Reflexology</h3>
-                <p><strong>60 min</strong></p>
-                <a href="datepicker.html" class="confirm-btn">Book Now</a>
-            </div>
-
-            <!-- Service 4 -->
-            <div class="booking-card">
-                <img src="images/Deeptissuefootmassage.png" alt="Deep Tissue Foot Massage">
-                <h3>Deep Tissue Foot Massage</h3>
-                <p><strong>50 min</strong></p>
-                <a href="datepicker.html" class="confirm-btn">Book Now</a>
-            </div>
-
-            <!-- Service 5 -->
-            <div class="booking-card">
-                <img src="images/sig.jpg" alt="Nature's Foot Spa Signature">
-                <h3>Nature's Foot Spa Signature</h3>
-                <p><strong>90 min</strong></p>
-                <a href="service5.html" class="confirm-btn">Book Now</a>
-            </div>
-</section>
- <div class="contact-container">
-    <!-- Left Side Info -->
-    <div class="contact-info">
-      <h2>We'd love to hear from you!</h2>
-      <p>We value each customer’s perspective and cherish the opportunity 
-      to hear from you. Whether you have a question, feedback, or just want 
-      to share your thoughts, we encourage you to reach out.</p>
-
-      <div class="contact-item">
-       
-        80 Eulogio Rodriguez Jr. Ave, Bagumbayan, Quezon City, 1110 Metro Manila
-      </div>
-      <div class="contact-item">
-        
-        Monday to Thursday / 8AM - 6PM <br> Friday / 8AM - 5PM
-      </div>
-      <div class="contact-item">
-        (02) 8656 5790
       </div>
     </div>
 
-    <!-- Right Side Form -->
-    <div class="contact-form" id="contact-us">
-      <form>
-        <label for="fname">First Name</label>
-        <input type="text" id="fname" placeholder="First Name">
+    <section class="booking-section" id="booking-sections">
+      <h1><strong>Book Your Appointment</strong></h1>
+      <p>Select your preferred service, date, and time.</p>
 
-        <label for="lname">Last Name</label>
-        <input type="text" id="lname" placeholder="Last Name">
+      <div class="booking-options">
+        <!-- Service 1 -->
+        <div class="booking-card">
+          <img src="images/hotstone.png" alt="Hot Stone Massage" />
+          <h3>Hot Stone Massage</h3>
+          <p><strong>60 min</strong></p>
+          <a href="service1.html?service_id=2" class="confirm-btn">Book Now</a>
+        </div>
 
-        <label for="mobile">Mobile Number</label>
-        <input type="tel" id="mobile" placeholder="+63 Mobile Number">
+        <!-- Service 2 -->
+        <div class="booking-card">
+          <img src="images/footsoak.png" alt="Aromatherapy Foot Soak" />
+          <h3>Aromatherapy Foot Soak</h3>
+          <p><strong>30 min</strong></p>
+          <a href="service1.html?service_id=3" class="confirm-btn">Book Now</a>
+        </div>
 
-        <label for="email">Email</label>
-        <input type="email" id="email" placeholder="Email">
+        <!-- Service 3 -->
+        <div class="booking-card">
+          <img src="images/reflexology.png" alt="Reflexology" />
+          <h3>Reflexology</h3>
+          <p><strong>60 min</strong></p>
+          <a href="service1.html?service_id=4" class="confirm-btn">Book Now</a>
+        </div>
 
-        <label for="message">Message</label>
-        <textarea id="message" placeholder="Type Here"></textarea>
+        <!-- Service 4 -->
+        <div class="booking-card">
+          <img
+            src="images/Deeptissuefootmassage.png"
+            alt="Deep Tissue Foot Massage"
+          />
+          <h3>Deep Tissue Foot Massage</h3>
+          <p><strong>50 min</strong></p>
+          <a href="service1.html?service_id=5" class="confirm-btn">Book Now</a>
+        </div>
 
-        <button type="submit">Submit</button>
-      </form>
+        <!-- Service 5 -->
+        <div class="booking-card">
+          <img src="images/sig.jpg" alt="Nature's Foot Spa Signature" />
+          <h3>Nature's Foot Spa Signature</h3>
+          <p><strong>90 min</strong></p>
+          <a href="service1.html?service_id=1" class="confirm-btn">Book Now</a>
+        </div>
+      </div>
+    </section>
+    <div class="contact-container">
+      <!-- Left Side Info -->
+      <div class="contact-info">
+        <h2>We'd love to hear from you!</h2>
+        <p>
+          We value each customer’s perspective and cherish the opportunity to
+          hear from you. Whether you have a question, feedback, or just want to
+          share your thoughts, we encourage you to reach out.
+        </p>
+
+        <div class="contact-item">
+          80 Eulogio Rodriguez Jr. Ave, Bagumbayan, Quezon City, 1110 Metro
+          Manila
+        </div>
+        <div class="contact-item">
+          Monday to Thursday / 8AM - 6PM <br />
+          Friday / 8AM - 5PM
+        </div>
+        <div class="contact-item">(02) 8656 5790</div>
+      </div>
+
+      <!-- Right Side Form -->
+      <div class="contact-form" id="contact-us">
+        <form>
+          <label for="fname">First Name</label>
+          <input type="text" id="fname" placeholder="First Name" />
+
+          <label for="lname">Last Name</label>
+          <input type="text" id="lname" placeholder="Last Name" />
+
+          <label for="mobile">Mobile Number</label>
+          <input type="tel" id="mobile" placeholder="+63 Mobile Number" />
+
+          <label for="email">Email</label>
+          <input type="email" id="email" placeholder="Email" />
+
+          <label for="message">Message</label>
+          <textarea id="message" placeholder="Type Here"></textarea>
+
+          <button type="submit">Submit</button>
+        </form>
+      </div>
     </div>
-  </div>
-<div class="loader">
-</div>
+    <div class="loader"></div>
 
-        <script src="load.js" defer></script>    
-   </body>
+    <script src="load.js" defer></script>
+  </body>
 </html>

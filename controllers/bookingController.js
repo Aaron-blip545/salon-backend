@@ -88,7 +88,7 @@ const bookingController = {
 
       if (!date) {
         throw new ApiError(400, 'Date is required');
-      }
+      }             
 
       const slots = await bookingService.getAvailableSlots(date);
 

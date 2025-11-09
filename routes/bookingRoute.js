@@ -7,9 +7,9 @@ const { authenticateToken, requireRole } = require('../middleware/auth');
 router.get('/available-slots', bookingController.getAvailableSlots);
 
 // Protected routes (require authentication)
-router.post('/:id/booking', authenticateToken, bookingController.createBooking);
-router.get('/:id/getbooking', authenticateToken, bookingController.getUserBookings);
-router.delete('/:id/remove', authenticateToken, bookingController.deleteBooking);
+router.post('/', authenticateToken, bookingController.createBooking);
+router.get('/', authenticateToken, bookingController.getUserBookings);
+router.delete('/:id', authenticateToken, bookingController.deleteBooking);
 
 
 
