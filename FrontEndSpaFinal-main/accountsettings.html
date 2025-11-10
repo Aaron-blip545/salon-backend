@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Profile</title>
+    <link rel="stylesheet" href="accountsettings.css" />
+  </head>
+  <body>
+    <div class="container">
+      <div class="profile">
+        <div class="profile-header">
+          <div class="profile-text-container">
+            <h1 class="profile-title">Display name</h1>
+            <p class="profile-email">Christian@gmail.com</p>
+          </div>
+        </div>
+
+        <div class="menu">
+          <a href="accountsettings.html" class="menu-link"
+            ><i class="fa-solid-fa fa-circle-user menu-icon"></i>Account</a
+          >
+
+          <a href="bookedservices.html" class="menu-link"
+            ><i class="fa-solid-fa fa-circle-user menu-icon"></i>Booked
+            Services</a
+          >
+
+          <a href="loginform.html" id="logoutBtn" class="menu-link"
+            ><i class="fa-solid-fa fa-circle-user menu-icon"></i>LogOut</a
+          >
+        </div>
+      </div>
+
+      <form class="account">
+        <div class="account-header">
+          <h1 class="account-title">Account Settings</h1>
+          <div class="btn-container">
+            <button class="btn-cancel">Cancel</button>
+            <button class="btn-save">Save</button>
+          </div>
+        </div>
+
+        <div class="account-edit">
+          <div class="input-container">
+            <label>Display Name</label>
+            <input type="text" placeholder="Display Name" />
+          </div>
+        </div>
+
+        <div class="account-edit">
+          <div class="input-container">
+            <label>Email</label>
+            <input type="email" placeholder="Email" />
+          </div>
+        </div>
+        <div class="account-edit">
+          <div class="input-container">
+            <label>Phone No.</label>
+            <input type="text" placeholder="Phone Number" />
+          </div>
+        </div>
+      </form>
+    </div>
+
+    <script src="accountsettings.js"></script>
+  </body>
+</html>

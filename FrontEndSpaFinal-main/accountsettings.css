@@ -1,0 +1,173 @@
+body { 
+    background-color: #f8fafc; 
+    font-family: sans-serif; 
+}
+
+.container { 
+    display: flex; 
+    margin: 50px 10px; 
+}
+
+/* ===== Profile Sidebar ===== */
+.profile { 
+    flex: 1; 
+    margin-right: 10px; 
+    background-color: #fff; 
+    box-shadow: 0 1px 4px #d1d5db; 
+    border-radius: 5px; 
+    height: max-content; 
+}
+
+.profile-header { 
+    display: flex; 
+    align-items: center; 
+    margin-left: 15px; 
+}
+
+.profile-text-container { 
+    line-height: 1.4; 
+}
+
+.profile-title { 
+    font-size: 20px; 
+    font-weight: 600; 
+    color: #1e293b; 
+}
+
+.profile-email { 
+    font-size: 14px; 
+    color: #64748b; 
+}
+
+/* ===== Menu Tabs ===== */
+.menu-link { 
+    display: block; 
+    text-decoration: none; 
+    color: #768499; 
+    padding: 10px; 
+    margin: 10px; 
+    border-radius: 10px; 
+    transition: all 0.3s ease; 
+    font-weight: 500; 
+    font-weight: bold;
+}
+
+.menu-icon { 
+    margin-right: 10px; 
+}
+
+/* Hover effect only (no blue highlight) */
+.menu-link:hover { 
+    background-color: #f1f5f9; 
+    color: #1e293b; 
+}
+
+/* ===== Account Section ===== */
+.account { 
+    flex: 2; 
+    margin-left: 10px; 
+    background-color: #fff; 
+    box-shadow: 0 1px 4px #d1d5db; 
+    border-radius: 5px; 
+}
+
+.account-header { 
+    display: flex; 
+    justify-content: space-between; 
+    align-items: center; 
+    padding: 10px; 
+    border-bottom: 1px solid #768499; 
+}
+
+.account-title { 
+    font-size: 20px; 
+    color: #1e293b; 
+    font-weight: 500; 
+    margin-left: 10px; 
+}
+
+/* ===== Buttons ===== */
+.btn-container { 
+    margin-right: 5px; 
+}
+
+.btn-cancel { 
+    width: 8em; 
+    height: 3em; 
+    cursor: pointer; 
+    border: 1px solid #768499; 
+    border-radius: 2em; 
+    color: #1e293b; 
+    margin-right: 5px; 
+    background-color: #fff; 
+    transition: background-color 0.3s; 
+}
+
+.btn-cancel:hover { 
+    background-color: #f1f5f9; 
+}
+
+.btn-save { 
+    width: 8em; 
+    height: 3em; 
+    cursor: pointer; 
+    border: 1px solid #458ff6; 
+    border-radius: 2em; 
+    color: #fff; 
+    margin-left: 5px; 
+    background-color: #536dfe; 
+    transition: background-color 0.3s; 
+}
+
+.btn-save:hover { 
+    background-color: #4053c9; 
+}
+
+/* ===== Input Styles ===== */
+.account-edit { 
+    display: flex; 
+    justify-content: space-between; 
+    margin: 15px 0; 
+}
+
+.input-container { 
+    width: 100%; 
+    display: flex; 
+    flex-direction: column; 
+    margin: 0 20px; 
+}
+
+.input-container label { 
+    color: #768499; 
+    font-size: 14px; 
+    margin-bottom: 4px; 
+}
+
+.input-container input { 
+    height: 25px; 
+    border: 1.5px solid #768499; 
+    border-radius: 5px; 
+    padding: 5px; 
+    color: #1e293b; 
+}
+
+.input-container input:focus { 
+    outline: none; 
+    border: 1.5px solid #536dfe; 
+}
+
+.input-container textarea { 
+    display: block; 
+    width: 100%; 
+    height: 100px; 
+    padding: 5px; 
+    border: 1.5px solid #768499; 
+    border-radius: 5px; 
+    color: #1e293b; 
+    font-family: sans-serif; 
+}
+
+.input-container textarea:focus { 
+    outline: none; 
+    border: 1.5px solid #536dfe; 
+}
