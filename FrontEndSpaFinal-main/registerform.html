@@ -38,6 +38,17 @@
             />
           </div>
 
+          <div class="field input">
+            <label for="phone">Phone Number</label>
+            <input
+              type="text"
+              name="phonenumber"
+              id="phonenumber"
+              autocomplete="off"
+              required
+            />
+          </div>
+
           <div class="field">
             <input
               type="submit"
@@ -63,6 +74,7 @@
                 body: JSON.stringify({
                   name: formData.get("username"),
                   email_address: formData.get("email"),
+                  phone_number: formData.get("phonenumber"),
                   password: formData.get("password"),
                 }),
                 headers: {
