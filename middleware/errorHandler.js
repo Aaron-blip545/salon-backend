@@ -2,7 +2,7 @@ const ApiError = require('../utils/ApiError');
 
 const errorHandler = (err, req, res, next) => {
   // Log error for debugging
-  console.error('Error:', err);
+  console.error('[ERROR]', err);
 
   // Handle custom API errors
   if (err instanceof ApiError) {
@@ -47,7 +47,7 @@ const errorHandler = (err, req, res, next) => {
   res.status(500).json({
     success: false,
     message: 'Internal server error',
-    ...(process.env.NODE_ENV === 'development' && { error: err.message })
+    ...(process.env.NODE_ENV === 'development' && { error: err.message, stack: err.stack })
   });
 };
 

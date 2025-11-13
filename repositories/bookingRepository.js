@@ -15,6 +15,7 @@ const bookingRepository = {
     return result.insertId;
   } ,
 
+  // Get booking by ID
   // Check if time slot is available
   isTimeSlotAvailable: async (booking_date, booking_time) => {
     const sql = `
@@ -33,10 +34,37 @@ const bookingRepository = {
       SELECT TIME(b.BOOKING_DATE) as BOOKING_TIME
       FROM bookings b
       WHERE DATE(b.BOOKING_DATE) = ?
-      AND bs.STATUS_NAME IN ('pending', 'confirmed')
+      AND b.STATUS_NAME IN ('pending', 'confirmed')
     `;
     const results = await promisifyQuery(sql, [date]);
     return results.map(r => r.BOOKING_TIME);
+  },
+
+  // Find bookings for a user, include service and transaction info
+  findByUserId: async (user_id) => {
+    const sql = `
+      SELECT
+        b.BOOKING_ID,
+        b.BOOKING_DATE,
+        b.BOOKING_TIME,
+        b.STATUS_NAME as booking_status,
+        s.SERVICE_NAME,
+        s.PRICE as service_price,
+        t.AMOUNT as paid_amount,
+        t.PRICE as transaction_price,
+        t.BOOKING_FEE as booking_fee,
+        t.REMAINING_BALANCE as remaining_balance,
+        t.PAYMENT_STATUS as payment_status
+        , t.PAYMENT_METHOD as payment_method
+      FROM bookings b
+      LEFT JOIN services s ON b.SERVICE_ID = s.SERVICE_ID
+      LEFT JOIN transactions t ON t.BOOKING_ID = b.BOOKING_ID
+      WHERE b.USER_ID = ?
+      ORDER BY b.BOOKING_DATE DESC, b.BOOKING_TIME DESC
+    `;
+
+    const results = await promisifyQuery(sql, [user_id]);
+    return results;
   },
 
   // Update booking status

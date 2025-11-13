@@ -7,6 +7,7 @@ const bodyParser = require('body-parser');
 const authRoutes = require('./routes/authRoute');
 const bookingRoutes = require('./routes/bookingRoute');
 const serviceRoutes = require('./routes/serviceRoute');
+const transactionRoutes = require('./routes/transactionRoute');
 
 // Import middleware
 const errorHandler = require('./middleware/errorHandler');
@@ -18,10 +19,15 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(bodyParser.json());
 
+// Serve frontend static files (SPA)
+const path = require('path');
+app.use(express.static(path.join(__dirname, 'FrontEndSpaFinal-main')));
+
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/bookings', bookingRoutes);
 app.use('/api/services', serviceRoutes);
+app.use('/api/transactions', transactionRoutes);
 
 
 // Health check
@@ -33,6 +39,16 @@ app.get('/health', (req, res) => {
 app.use(errorHandler);
 
 // Start server
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(`✅ Server running on http://localhost:${PORT}`);
+});
+
+// Handle unhandled rejections
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+});
+
+// Handle uncaught exceptions
+process.on('uncaughtException', (error) => {
+  console.error('Uncaught Exception:', error);
 });

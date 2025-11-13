@@ -15,11 +15,14 @@ const userService = {
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
+    // Trim and limit phone to 15 characters
+    const trimmedPhone = (phone || '').trim().substring(0, 15);
+
     // Create user
     const userId = await userRepository.create({
       name,
       email_address,
-      phone,
+      phone: trimmedPhone,
       password_hash: hashedPassword,
       role: 'customer'
     });
@@ -58,6 +61,42 @@ const userService = {
         role: user.ROLE
       }
     };
+  }
+  ,
+
+  // Get user by ID
+  getUserById: async (user_id) => {
+    const user = await userRepository.findById(user_id);
+    if (!user) throw new ApiError(404, 'User not found');
+    return {
+      id: user.USER_ID,
+      name: user.NAME,
+      email: user.EMAIL_ADDRESS,
+      phone: user.PHONE,
+      role: user.ROLE
+    };
+  },
+
+  // Update user profile
+  updateUser: async (user_id, { name, email_address, phone }) => {
+    // Basic validation
+    if (!name || !email_address) {
+      throw new ApiError(400, 'Name and email are required');
+    }
+
+    // Optional: check for duplicate email (if email changed)
+    const existing = await userRepository.findByEmail(email_address);
+    if (existing && existing.USER_ID !== user_id) {
+      throw new ApiError(409, 'Email address already used by another account');
+    }
+
+    // Trim and limit phone to 15 characters
+    const trimmedPhone = (phone || '').trim().substring(0, 15);
+
+    const updated = await userRepository.updateById(user_id, { name, email_address, phone: trimmedPhone });
+    if (!updated) throw new ApiError(500, 'Failed to update user');
+
+    return await userService.getUserById(user_id);
   }
 };
 

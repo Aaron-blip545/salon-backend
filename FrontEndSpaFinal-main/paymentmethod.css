@@ -1,98 +1,262 @@
-/* Global Reset */
 * {
-  box-sizing: border-box;
-  font-family: 'Poppins', sans-serif;
-  margin: 0;
-  padding: 0;
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
 }
 
-/* Body */
 body {
-  background: #f5f5f5;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  padding: 40px;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
 }
 
-/* Container */
 .container {
-  background: #ffffff;
-  width: 800px;
-  padding: 30px;
-  border-radius: 10px;
-  box-shadow: 0 4px 15px #d1d1d1;
+    background: white;
+    border-radius: 20px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    max-width: 600px;
+    width: 100%;
+    overflow: hidden;
 }
 
-/* Layout */
-.row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 20px;
+.header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 30px;
+    text-align: center;
 }
 
-.column {
-  flex: 1 1 350px;
+.header h1 {
+    font-size: 28px;
+    margin-bottom: 10px;
 }
 
-/* Titles */
-.title {
-  font-size: 18px;
-  font-weight: 600;
-  text-transform: uppercase;
-  margin-bottom: 20px;
-  color: #222222;
+.header p {
+    opacity: 0.9;
+    font-size: 14px;
 }
 
-/* Input Fields */
-.input-box,
-.flex {
-  margin-bottom: 15px;
+.content {
+    padding: 30px;
 }
 
-.input-box span,
-.flex span {
-  display: block;
-  font-weight: 500;
-  color: #444444;
-  margin-bottom: 6px;
+.booking-summary {
+    background: #f8f9fa;
+    border-radius: 10px;
+    padding: 20px;
+    margin-bottom: 30px;
 }
 
-.input-box input,
-.flex input {
-  width: 100%;
-  padding: 10px 15px;
-  font-size: 15px;
-  border: 1px solid #cccccc;
-  border-radius: 6px;
-  outline: none;
-  transition: all 0.3s ease;
+.booking-summary h3 {
+    color: #333;
+    margin-bottom: 15px;
+    font-size: 18px;
 }
 
-.input-box input:focus,
-.flex input:focus {
-  border-color: #7b61ff;
-  box-shadow: 0 0 3px #7b61ff;
+.summary-item {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 10px;
+    color: #666;
 }
 
-/* Submit Button */
-.btn {
-  width: 100%;
-  padding: 12px;
-  border: none;
-  border-radius: 6px;
-  background-color: #7b61ff;
-  color: #ffffff;
-  font-size: 16px;
-  font-weight: 500;
-  cursor: pointer;
-  margin-top: 10px;
-  transition: background 0.3s ease;
+.summary-item.total {
+    border-top: 2px solid #ddd;
+    padding-top: 10px;
+    margin-top: 10px;
+    font-weight: bold;
+    color: #333;
+    font-size: 18px;
 }
 
-.btn:hover {
-  background-color: #6948ff;
+.payment-section h3 {
+    color: #333;
+    margin-bottom: 20px;
+    font-size: 18px;
 }
-.input-box img{
-  width: 100px;
+
+.payment-methods {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+    margin-bottom: 30px;
+}
+
+.payment-option {
+    border: 2px solid #e0e0e0;
+    border-radius: 10px;
+    padding: 20px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-align: center;
+    position: relative;
+}
+
+.payment-option:hover {
+    border-color: #667eea;
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(102, 126, 234, 0.2);
+}
+
+.payment-option.selected {
+    border-color: #667eea;
+    background: #f0f4ff;
+}
+
+.payment-icon {
+    font-size: 40px;
+    margin-bottom: 10px;
+}
+
+.option-title {
+    font-weight: bold;
+    margin-bottom: 5px;
+    color: #333;
+}
+
+.option-description {
+    font-size: 12px;
+    color: #999;
+}
+
+.check-icon {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    color: #667eea;
+    font-size: 20px;
+    display: none;
+}
+
+.payment-option.selected .check-icon {
+    display: block;
+}
+
+.online-payment-details {
+    display: none;
+    background: #f8f9fa;
+    border-radius: 10px;
+    padding: 20px;
+    margin-bottom: 20px;
+    animation: slideDown 0.3s ease;
+}
+
+.online-payment-details.active {
+    display: block;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.payment-providers {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.provider-btn {
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 15px;
+    background: white;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-align: center;
+    font-weight: bold;
+    color: #333;
+    font-size: 14px;
+}
+
+.provider-btn:hover {
+    border-color: #667eea;
+    transform: scale(1.05);
+}
+
+.provider-btn.selected {
+    border-color: #667eea;
+    background: #667eea;
+    color: white;
+}
+
+.info-box {
+    background: #e3f2fd;
+    border-left: 4px solid #2196f3;
+    padding: 15px;
+    margin-top: 15px;
+    border-radius: 5px;
+    font-size: 13px;
+    color: #1976d2;
+    line-height: 1.6;
+}
+
+.submit-btn {
+    width: 100%;
+    padding: 15px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.submit-btn:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
+}
+
+.submit-btn:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.loading {
+    display: none;
+    text-align: center;
+    padding: 20px;
+    color: #667eea;
+}
+
+.loading.active {
+    display: block;
+}
+
+.loading::after {
+    content: '...';
+    animation: dots 1.5s steps(4, end) infinite;
+}
+
+@keyframes dots {
+    0%, 20% {
+        content: '.';
+    }
+    40% {
+        content: '..';
+    }
+    60%, 100% {
+        content: '...';
+    }
+}
+
+@media (max-width: 600px) {
+    .payment-methods,
+    .payment-providers {
+        grid-template-columns: 1fr;
+    }
 }

@@ -239,7 +239,7 @@
           const token = localStorage.getItem("token");
           if (!token) {
             alert("Please login first to book a service!");
-            window.location.href = "Login.html";
+            window.location.href = "loginform.html";
             return;
           }
 
@@ -253,27 +253,31 @@
           console.log("Sending booking:", bookingData);
 
           try {
-            const response = await fetch(`${API_BASE}/bookings`, {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${token}`,
-              },
-              body: JSON.stringify(bookingData),
-            });
+            // Try to get username from localStorage or user data
+            let username =
+              localStorage.getItem("username") ||
+              localStorage.getItem("name") ||
+              "Guest";
 
-            const data = await response.json();
+            // Flow: Booking -> Payment Selection -> Payment -> Save Booking
+            // Store booking details in sessionStorage for payment page
+            sessionStorage.setItem(
+              "bookingDetails",
+              JSON.stringify({
+                service_id: bookingData.service_id,
+                service_name: currentService.SERVICE_NAME,
+                booking_date: bookingData.booking_date,
+                booking_time: bookingData.booking_time,
+                price: currentService.PRICE,
+                username: username,
+              })
+            );
 
-            if (data.success) {
-              alert("✅ Booking created successfully! Proceed to payment.");
-              // Redirect to payment page
-              window.location.href = "paymentmethod.html";
-            } else {
-              alert("❌ Error: " + data.message);
-            }
+            // Redirect to payment method selection page
+            window.location.href = "paymentmethod.html";
           } catch (error) {
-            console.error("Booking error:", error);
-            alert("❌ Network error: " + error.message);
+            console.error("Redirect to payment error:", error);
+            alert("❌ Could not start payment flow: " + error.message);
           }
         });
       }

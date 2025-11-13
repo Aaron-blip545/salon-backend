@@ -3,85 +3,103 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Payment Method</title>
+    <title>Complete Booking</title>
     <link rel="stylesheet" href="paymentmethod.css" />
   </head>
   <body>
     <div class="container">
-      <form action="">
-        <div class="row">
-          <div class="column">
-            <h3 class="title">Billing Address</h3>
+      <div class="header">
+        <h1>Complete Your Booking</h1>
+        <p>Choose your payment method to confirm</p>
+      </div>
 
-            <div class="input-box">
-              <span>Full Name :</span>
-              <input type="text" placeholder="Christian Jeff Cagalawan" />
-            </div>
-
-            <div class="input-box">
-              <span>Email :</span>
-              <input type="text" placeholder="exampleemail@gmail.com" />
-            </div>
-
-            <div class="input-box">
-              <span>Address :</span>
-              <input type="text" placeholder="Room-Street-Locality" />
-            </div>
-
-            <div class="input-box">
-              <span>City :</span>
-              <input type="text" placeholder="Cagayan de Oro City" />
-            </div>
-
-            <div class="flex">
-              <span>State :</span>
-              <input type="text" placeholder="Optional" />
-            </div>
-
-            <div class="flex">
-              <span>Zip Code :</span>
-              <input type="text" placeholder="9000" />
-            </div>
+      <div class="content">
+        <!-- Booking Summary -->
+        <div class="booking-summary">
+          <h3>Booking Summary</h3>
+          <div class="summary-item">
+            <span>Username:</span>
+            <span id="username">Loading...</span>
           </div>
-
-          <div class="column">
-            <h3 class="title">Payment</h3>
-
-            <div class="input-box">
-              <span>Cards Accepted :</span>
-              <img src="images/cardaccepted.png" alt="" />
-            </div>
-
-            <div class="input-box">
-              <span>Name On Card :</span>
-              <input type="text" placeholder="M. Cagalawan Christian" />
-            </div>
-
-            <div class="input-box">
-              <span>Credit Card Number :</span>
-              <input type="text" placeholder="0000-0000-0000-0000" />
-            </div>
-
-            <div class="input-box">
-              <span>Exp. Month :</span>
-              <input type="text" placeholder="August" />
-            </div>
-
-            <div class="flex">
-              <span>Exp. Year :</span>
-              <input type="text" placeholder="2025" />
-            </div>
-
-            <div class="flex">
-              <span>CVV :</span>
-              <input type="text" placeholder="123" />
-            </div>
+          <div class="summary-item">
+            <span>Service:</span>
+            <span><strong id="service-name">Loading...</strong></span>
+          </div>
+          <div class="summary-item">
+            <span>Date:</span>
+            <span id="booking-date">Loading...</span>
+          </div>
+          <div class="summary-item">
+            <span>Time:</span>
+            <span id="booking-time">Loading...</span>
+          </div>
+          <div class="summary-item">
+            <span>Service Price:</span>
+            <span id="service-price">₱0.00</span>
+          </div>
+          <div class="summary-item">
+            <span>Booking Fee (20%):</span>
+            <span id="booking-fee">₱0.00</span>
+          </div>
+          <div class="summary-item total">
+            <span>Total Amount:</span>
+            <span id="total-price">₱0.00</span>
           </div>
         </div>
-        <button type="submit" class="btn">Submit</button>
-      </form>
+
+        <!-- Payment Method Selection -->
+        <div class="payment-section">
+          <h3>Select Payment Method</h3>
+          <div class="payment-methods">
+            <div class="payment-option" id="cash-option">
+              <div class="payment-icon">💵</div>
+              <div class="option-title">Cash Payment</div>
+              <div class="option-description">Pay on service day</div>
+              <div class="check-icon">✓</div>
+            </div>
+
+            <div class="payment-option" id="online-option">
+              <div class="payment-icon">💳</div>
+              <div class="option-title">Online Payment</div>
+              <div class="option-description">Pay securely now</div>
+              <div class="check-icon">✓</div>
+            </div>
+          </div>
+
+          <!-- Online Payment Details -->
+          <div class="online-payment-details" id="online-details">
+            <h4 style="margin-bottom: 15px; color: #333">
+              Choose Payment Provider
+            </h4>
+            <div class="payment-providers">
+              <button class="provider-btn" data-provider="gcash">GCash</button>
+              <button class="provider-btn" data-provider="paymaya">
+                PayMaya
+              </button>
+              <button class="provider-btn" data-provider="card">Card</button>
+            </div>
+            <div class="info-box">
+              <strong>ℹ️ How it works:</strong><br />
+              1. Click "Proceed to Payment"<br />
+              2. You'll be redirected to secure payment page<br />
+              3. Complete payment with your chosen provider<br />
+              4. Receive confirmation once successful
+            </div>
+          </div>
+
+          <!-- Loading Indicator -->
+          <div class="loading" id="loading">
+            <p>Processing your payment</p>
+          </div>
+
+          <!-- Submit Button -->
+          <button class="submit-btn" id="submit-btn" disabled>
+            Select Payment Method
+          </button>
+        </div>
+      </div>
     </div>
 
-    <script src="paymentmethod.js"></script>
+    <script src="transaction.js"></script>
   </body>
 </html>

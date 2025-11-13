@@ -43,8 +43,38 @@ const authController = {
       res.json({
         success: true,
         message: 'Login successful',
-        data: result
+        // return token at top-level for frontend convenience
+        token: result.token,
+        data: { user: result.user }
       });
+    } catch (error) {
+      next(error);
+    }
+  }
+  ,
+
+  // Get current authenticated user
+  me: async (req, res, next) => {
+    try {
+      const userId = req.user && (req.user.id || req.user.user_id);
+      if (!userId) throw new ApiError(401, 'User not authenticated');
+
+      const user = await userService.getUserById(userId);
+      res.json({ success: true, data: user });
+    } catch (error) {
+      next(error);
+    }
+  },
+
+  // Update current authenticated user
+  updateMe: async (req, res, next) => {
+    try {
+      const userId = req.user && (req.user.id || req.user.user_id);
+      if (!userId) throw new ApiError(401, 'User not authenticated');
+
+      const { name, email_address, phone } = req.body;
+      const updated = await userService.updateUser(userId, { name, email_address, phone });
+      res.json({ success: true, message: 'Profile updated', data: updated });
     } catch (error) {
       next(error);
     }

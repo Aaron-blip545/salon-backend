@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>GCash Checkout (Mock)</title>
+    <style>
+      body {
+        font-family: Segoe UI, Arial;
+        background: #f5f7fb;
+        color: #111;
+        padding: 24px;
+      }
+      .card {
+        max-width: 520px;
+        margin: 40px auto;
+        background: #fff;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 6px 24px rgba(15, 23, 42, 0.06);
+      }
+      .row {
+        display: flex;
+        justify-content: space-between;
+        margin: 8px 0;
+      }
+      .btn {
+        display: inline-block;
+        padding: 10px 16px;
+        border-radius: 6px;
+        background: #0ea5a4;
+        color: #fff;
+        border: none;
+        cursor: pointer;
+      }
+      .btn:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+      }
+      .note {
+        font-size: 13px;
+        color: #555;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <h2>GCash (Mock) Checkout</h2>
+      <p class="note">
+        This is a mock checkout page used for local testing. It simulates a
+        successful payment.
+      </p>
+
+      <div class="row">
+        <strong>Booking ID</strong><span id="booking-id">-</span>
+      </div>
+      <div class="row"><strong>Amount</strong><span id="amount">-</span></div>
+      <div style="margin-top: 18px">
+        <button id="pay-btn" class="btn">Complete Payment</button>
+        <button
+          id="cancel-btn"
+          style="margin-left: 8px"
+          class="btn"
+          onclick="window.history.back()"
+        >
+          Cancel
+        </button>
+      </div>
+
+      <p id="status" style="margin-top: 12px"></p>
+    </div>
+
+    <script>
+      const params = new URLSearchParams(window.location.search);
+      const bookingId = params.get("booking_id");
+      const amount = params.get("amount");
+      // If booking details were passed instead of booking_id, read them
+      const serviceId = params.get("service_id");
+      const bookingDate = params.get("booking_date");
+      const bookingTime = params.get("booking_time");
+
+      document.getElementById("booking-id").textContent = bookingId || "-";
+      document.getElementById("amount").textContent = amount
+        ? `₱${parseFloat(amount).toFixed(2)}`
+        : "-";
+
+      const API_BASE_URL = "http://localhost:3000/api";
+
+      function getToken() {
+        return localStorage.getItem("token");
+      }
+
+      async function completePayment() {
+        const statusEl = document.getElementById("status");
+        const payBtn = document.getElementById("pay-btn");
+        payBtn.disabled = true;
+        statusEl.textContent = "Processing payment...";
+
+        const token = getToken();
+        if (!token) {
+          statusEl.textContent =
+            "You must be logged in to complete payment. Redirecting to login...";
+          setTimeout(() => (window.location.href = "loginform.html"), 1500);
+          return;
+        }
+
+        try {
+          // If we have an existing booking id, use confirm endpoint
+          if (bookingId) {
+            const resp = await fetch(
+              `${API_BASE_URL}/transactions/gcash/confirm`,
+              {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  Authorization: `Bearer ${token}`,
+                },
+                body: JSON.stringify({ booking_id: bookingId }),
+              }
+            );
+
+            const data = await resp.json();
+            if (data.success) {
+              sessionStorage.setItem(
+                "bookingSuccess",
+                "Payment successful and booking confirmed."
+              );
+              statusEl.textContent =
+                "Payment successful. Redirecting to your bookings...";
+              setTimeout(
+                () => (window.location.href = "bookedservices.html"),
+                1200
+              );
+              return;
+            }
+            statusEl.textContent =
+              "Payment confirmation failed: " + (data.message || "Unknown");
+            payBtn.disabled = false;
+            return;
+          }
+
+          // Otherwise, we were redirected here BEFORE booking was created.
+          // Create the booking + transaction now (payment already done/mock succeeded)
+          // First try sessionStorage, then fall back to query params
+          let pending = sessionStorage.getItem("pendingBooking");
+
+          if (!pending) {
+            // Construct from query params if not in sessionStorage
+            if (serviceId && bookingDate && bookingTime) {
+              pending = JSON.stringify({
+                service_id: serviceId,
+                booking_date: bookingDate,
+                booking_time: bookingTime,
+                price: amount,
+              });
+            }
+          }
+
+          if (!pending) {
+            statusEl.textContent =
+              "Missing booking information. Cannot create booking.";
+            payBtn.disabled = false;
+            return;
+          }
+
+          const bookingObj = JSON.parse(pending);
+
+          // Validate required fields
+          if (
+            !bookingObj.service_id ||
+            !bookingObj.booking_date ||
+            !bookingObj.booking_time
+          ) {
+            statusEl.textContent = "Invalid booking information.";
+            payBtn.disabled = false;
+            return;
+          }
+
+          // Create booking + transaction (online payment completed)
+          const resp2 = await fetch(`${API_BASE_URL}/transactions`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({
+              service_id: bookingObj.service_id,
+              booking_date: bookingObj.booking_date,
+              booking_time: bookingObj.booking_time,
+              payment_method: "GCASH",
+              payment_type: "FULL_PAYMENT",
+            }),
+          });
+
+          const data2 = await resp2.json();
+          if (data2.success) {
+            sessionStorage.removeItem("pendingBooking");
+            sessionStorage.setItem(
+              "bookingSuccess",
+              "Payment successful and booking created (pending approval)."
+            );
+            statusEl.textContent =
+              "Payment successful. Redirecting to your bookings...";
+            setTimeout(
+              () => (window.location.href = "bookedservices.html"),
+              1200
+            );
+            return;
+          }
+
+          statusEl.textContent =
+            "Failed to create booking after payment: " +
+            (data2.message || "Unknown");
+          payBtn.disabled = false;
+        } catch (err) {
+          console.error(err);
+          statusEl.textContent = "Network error. Please try again.";
+          payBtn.disabled = false;
+        }
+      }
+
+      document
+        .getElementById("pay-btn")
+        .addEventListener("click", completePayment);
+    </script>
+  </body>
+</html>

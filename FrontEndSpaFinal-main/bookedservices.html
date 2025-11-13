@@ -11,15 +11,15 @@
       <div class="profile">
         <div class="profile-header">
           <div class="profile-text-container">
-            <h1 class="profile-title">Display name</h1>
-            <p class="profile-email">Christian@gmail.com</p>
+            <h1 class="profile-title">Loading...</h1>
+            <p class="profile-email"></p>
           </div>
         </div>
 
         <div class="menu">
           <a href="accountsettings.html" class="menu-link">Account</a>
           <a href="bookedservices.html" class="menu-link">Booked Services</a>
-          <a href="loginform.html " id="logoutBtn" class="menu-link">LogOut</a>
+          <a href="loginform.html" id="logoutBtn" class="menu-link">LogOut</a>
         </div>
       </div>
 
@@ -29,27 +29,21 @@
         <div class="table-section">
           <h2>Upcoming Appointments</h2>
           <table>
-            <tr>
-              <th>Service</th>
-              <th>Date</th>
-              <th>Time</th>
-              <th>Status</th>
-              <th>Action</th>
-            </tr>
-            <tr>
-              <td>Hot Stone Massage</td>
-              <td>Nov 10, 2025</td>
-              <td>2:00 PM</td>
-              <td class="status active">Active</td>
-              <td><button class="cancel-btn">Cancel</button></td>
-            </tr>
-            <tr>
-              <td>Nature Foot Spa Signature</td>
-              <td>Nov 15, 2025</td>
-              <td>4:30 PM</td>
-              <td class="status pending">Pending</td>
-              <td><button class="cancel-btn">Cancel</button></td>
-            </tr>
+            <thead>
+              <tr>
+                <th>Service</th>
+                <th>Date</th>
+                <th>Time</th>
+                <th>Total</th>
+                <th>Status</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="bookings-tbody">
+              <tr>
+                <td colspan="6">Loading bookings...</td>
+              </tr>
+            </tbody>
           </table>
         </div>
       </div>

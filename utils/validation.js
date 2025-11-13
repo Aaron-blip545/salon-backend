@@ -5,8 +5,8 @@ const validationResult = (data) => {
     errors.push('Name must be at least 2 characters');
   }
 
-  if (data.phone && !/^09\d{9}$/.test(data.phone)) {
-    errors.push('Invalid phone number format (should be 09XXXXXXXXX)');
+  if (data.phone && data.phone.trim().length < 7) {
+    errors.push('Phone number must be at least 7 characters');
   }
 
   if (data.password && data.password.length < 6) {

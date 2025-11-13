@@ -29,6 +29,13 @@ const userRepository = {
     const results = await promisifyQuery(sql, [user_id]);
     return results[0] || null;
   }
+  ,
+  // Update user by ID
+  updateById: async (user_id, { name, email_address, phone }) => {
+    const sql = 'UPDATE user SET NAME = ?, EMAIL_ADDRESS = ?, PHONE = ? WHERE USER_ID = ?';
+    const result = await promisifyQuery(sql, [name, email_address, phone, user_id]);
+    return result.affectedRows > 0;
+  }
 };
 
 module.exports = userRepository;
