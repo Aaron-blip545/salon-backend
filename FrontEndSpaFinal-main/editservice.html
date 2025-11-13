@@ -1,98 +1,357 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Editable Booking Services</title>
-  <link rel="stylesheet" href="editservices.css">
-</head>
-<body>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Edit Services — Admin</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="adminpanel.css" />
+    <script>
+      // Client-side guard: ensure the user has an admin token/role before showing the page.
+      // If a token exists but no role is stored, validate it with the server.
+      (async function ensureAdmin() {
+        try {
+          const token = localStorage.getItem('token');
+          const storedRole = (localStorage.getItem('role') || '').toString().toLowerCase();
+          const next = encodeURIComponent(window.location.pathname.split('/').pop() || 'editservice.html');
+          // Use a relative login path so it works whether served from Live Server or directly
+          const loginUrl = 'loginform.html?next=' + next;
 
-  <!-- Back Button -->
- <a href="adminpanel.html" class="back-btn">← Back</a>
+          if (!token) {
+            window.location.href = loginUrl;
+            return;
+          }
 
-  <h1>Editable Booking Services</h1>
+          if (storedRole === 'admin') {
+            // already known admin
+            return;
+          }
 
-  <div class="controls">
-    <input type="text" id="service-name" placeholder="Service Name">
-    <input type="text" id="service-duration" placeholder="Duration (e.g. 60 min)">
-    <input type="text" id="service-img" placeholder="Image URL (optional)">
-    <button id="add-service">Add Service</button>
-  </div>
+          // Try to validate the token with the backend to determine role.
+          const API_BASE = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') ? 'http://localhost:3000' : '';
+          const resp = await fetch(API_BASE + '/api/auth/me', { headers: { Authorization: 'Bearer ' + token } });
+          if (!resp.ok) {
+            window.location.href = loginUrl;
+            return;
+          }
 
-  <div class="booking-container" id="booking-container">
-    <!-- Default services -->
-    <div class="booking-card">
-      <button class="remove-btn">&times;</button>
-      <img src="images/hotstone.png" alt="Hot Stone Massage">
-      <h3 contenteditable="false">Hot Stone Massage</h3>
-      <p contenteditable="false"><strong>60 min</strong></p>
-      <input type="datetime-local">
-      <button class="confirm-btn">Book Now</button>
+          // Support responses that return either the payload directly or wrapped
+          let body;
+          try { body = await resp.json(); } catch(e) { body = null; }
+          const roleFromServer = (body && (body.role || (body.data && body.data.role))) ? (body.role || (body.data && body.data.role)) : null;
+          if (roleFromServer && roleFromServer.toString().toLowerCase() === 'admin') {
+            localStorage.setItem('role', roleFromServer);
+            return; // allowed
+          }
+
+          // Not an admin according to server
+          window.location.href = loginUrl;
+        } catch (e) {
+          // On any error, redirect to login
+          window.location.href = 'loginform.html?next=editservice.html';
+        }
+      })();
+    </script>
+  </head>
+  <body>
+    <div class="app" id="app">
+      <aside class="sidebar">
+        <div class="brand">
+          <div class="logo">SB</div>
+          <div class="brand-text">
+            <h3>Salon</h3>
+            <small>Admin</small>
+          </div>
+        </div>
+
+        <nav class="nav">
+          <a class="nav-item" href="adminpanel.html">Dashboard</a>
+          <a class="nav-item active" href="#">Bookings</a>
+          <a class="nav-item" href="#services">Services</a>
+          <a class="nav-item" href="#analytics">Analytics</a>
+          <a class="nav-item" href="#reports">Reports</a>
+        </nav>
+
+        <div class="sidebar-footer">
+          <a id="logoutBtn" class="nav-item logout" href="#">Log out</a>
+        </div>
+      </aside>
+
+      <main class="main">
+        <header class="main-header">
+          <div class="search-and-title">
+            <h1>Services</h1>
+            <p class="muted">Edit and manage services</p>
+          </div>
+
+          <div class="header-actions">
+            <button id="themeToggle" class="btn toggle" aria-label="Toggle theme">🌙</button>
+            <div class="welcome">Welcome, <strong>Admin</strong></div>
+          </div>
+        </header>
+
+        <section class="content">
+          <div class="grid">
+            <div class="col col-8">
+              <div class="card">
+                <div class="card-header">
+                  <h2>Edit Services</h2>
+                  <small class="muted">Add, edit or remove services</small>
+                </div>
+                <div class="card-body">
+                  <div class="controls" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px">
+                    <input type="text" id="service-name" placeholder="Service Name">
+                    <input type="text" id="service-duration" placeholder="Duration (e.g. 60 min)">
+                    <input type="text" id="service-price" placeholder="Price (e.g. 350)">
+                    <input type="text" id="service-desc" placeholder="Short description (optional)">
+                    <input type="text" id="service-img" placeholder="Image URL (optional)">
+                    <button id="add-service" class="action-btn confirm">Add Service</button>
+                  </div>
+
+                  <div class="service-list" id="booking-container" style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+                    <!-- existing service cards are populated here -->
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="col col-4">
+              <div class="card">
+                <div class="card-header">
+                  <h3>Preview</h3>
+                </div>
+                <div class="card-body small-muted">
+                  <p>Click a card to edit. Use the <strong>Add Service</strong> control to create new services.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
     </div>
 
-    <div class="booking-card">
-      <button class="remove-btn">&times;</button>
-      <img src="images/footsoak.png" alt="Aromatherapy Foot Soak">
-      <h3 contenteditable="false">Aromatherapy Foot Soak</h3>
-      <p contenteditable="false"><strong>30 min</strong></p>
-      <input type="datetime-local">
-      <button class="confirm-btn">Book Now</button>
-    </div>
+    <script src="adminpanel-lite.js"></script>
+    <script>
+      // Service editor logic (kept simple). This script intentionally avoids touching adminpanel.js globals.
+      const container = document.getElementById('booking-container');
+      const addBtn = document.getElementById('add-service');
 
-    <div class="booking-card">
-      <button class="remove-btn">&times;</button>
-      <img src="images/reflexology.png" alt="Reflexology">
-      <h3 contenteditable="false">Reflexology</h3>
-      <p contenteditable="false"><strong>60 min</strong></p>
-      <input type="datetime-local">
-      <button class="confirm-btn">Book Now</button>
-    </div>
-  </div>
+      // Default services (fallback if API fails)
+      const defaults = [
+        {name:'Hot Stone Massage', duration:'60 min', img:'images/hotstone.png'},
+        {name:'Aromatherapy Foot Soak', duration:'30 min', img:'images/footsoak.png'},
+        {name:'Reflexology', duration:'60 min', img:'images/reflexology.png'}
+      ];
 
-  <script>
-    const container = document.getElementById('booking-container');
-    const addBtn = document.getElementById('add-service');
+      // Load services from database first, then add defaults if needed
+      async function loadAllServices() {
+        try {
+          const API_BASE = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') ? 'http://localhost:3000' : '';
+          const res = await fetch(API_BASE + '/api/services');
+          
+          if (res.ok) {
+            const data = await res.json();
+            const services = Array.isArray(data) ? data : (data && data.data ? data.data : []);
+            
+            // Clear container first
+            container.innerHTML = '';
+            
+            // Add services from database
+            services.forEach(s => {
+              const name = (s.SERVICE_NAME || s.service_name || s.name || '').toString().trim();
+              if (!name) return;
+              
+              const duration = s.DURATION || s.duration || '60 min';
+              const img = s.IMAGE_URL || s.IMG || 'images/sig.jpg';
+              const serviceId = s.SERVICE_ID || s.service_id || s.id;
+              
+              const card = createCard({name, duration, img, serviceId});
+              container.appendChild(card);
+            });
+            
+            // Add defaults only if no services from database
+            if (services.length === 0) {
+              defaults.forEach(s => container.appendChild(createCard(s)));
+            }
+          } else {
+            // Fallback to defaults if API fails
+            defaults.forEach(s => container.appendChild(createCard(s)));
+          }
+        } catch (err) {
+          console.log('Could not load services from API, using defaults:', err);
+          defaults.forEach(s => container.appendChild(createCard(s)));
+        }
+      }
 
-    // Add new service
-    addBtn.addEventListener('click', () => {
-      const name = document.getElementById('service-name').value.trim() || 'New Service';
-      const duration = document.getElementById('service-duration').value.trim() || '30 min';
-      const img = document.getElementById('service-img').value.trim() || 'https://via.placeholder.com/300x180?text=Service';
+      function createCard({name,duration,img,serviceId}){
+        const card = document.createElement('div');
+        card.className = 'booking-card card';
+        card.style.padding = '12px';
+        card.innerHTML = `
+          <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:8px">
+            <strong contenteditable="true">${escapeHtml(name)}</strong>
+            <button class="remove-btn action-btn" style="background:transparent;border:1px solid rgba(15,23,42,0.06)">&times;</button>
+          </div>
+          <img src="${escapeHtml(img)}" alt="${escapeHtml(name)}" style="width:100%;height:120px;object-fit:cover;border-radius:8px;margin-bottom:8px">
+          <div style="color:var(--muted);font-size:13px">Duration: <span contenteditable="true">${escapeHtml(duration)}</span></div>
+        `;
+        attachCardEvents(card, serviceId);
+        return card;
+      }
 
-      const card = document.createElement('div');
-      card.classList.add('booking-card');
-      card.innerHTML = `
-        <button class="remove-btn">&times;</button>
-        <img src="${img}" alt="${name}">
-        <h3 contenteditable="true">${name}</h3>
-        <p contenteditable="true"><strong>${duration}</strong></p>
-        <input type="datetime-local">
-        <button class="confirm-btn">Book Now</button>
-      `;
-      container.appendChild(card);
-      attachCardEvents(card);
-    });
+      function attachCardEvents(card, serviceId){
+        const removeBtn = card.querySelector('.remove-btn');
+        removeBtn.addEventListener('click', async () => {
+          if (confirm('Are you sure you want to delete this service?')) {
+            if (serviceId) {
+              // Delete from database
+              try {
+                const API_BASE = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') ? 'http://localhost:3000' : '';
+                const res = await fetch(API_BASE + '/api/services/' + serviceId, {
+                  method: 'DELETE'
+                });
+                
+                if (res.ok) {
+                  card.remove();
+                  updateMainPageServices(); // Update main page in real-time
+                  showMessage('Service deleted successfully!', 'success');
+                } else {
+                  showMessage('Failed to delete service from database', 'error');
+                }
+              } catch (err) {
+                console.error('Error deleting service:', err);
+                showMessage('Error deleting service: ' + err.message, 'error');
+              }
+            } else {
+              // Just remove from UI (for default services)
+              card.remove();
+              showMessage('Service removed from view', 'success');
+            }
+          }
+        });
+      }
 
-    // Attach remove/edit events to cards
-    function attachCardEvents(card) {
-      const removeBtn = card.querySelector('.remove-btn');
-      removeBtn.addEventListener('click', () => card.remove());
+      function escapeHtml(str){
+        return String(str).replace(/[&<>\"]/g, function(tag){
+          const chars = {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'};
+          return chars[tag] || tag;
+        });
+      }
 
-      const nameEl = card.querySelector('h3');
-      const durEl = card.querySelector('p');
+      // Show message to user
+      function showMessage(message, type = 'info') {
+        // Create a temporary message element
+        const msgDiv = document.createElement('div');
+        msgDiv.style.cssText = `
+          position: fixed;
+          top: 20px;
+          right: 20px;
+          padding: 15px 20px;
+          border-radius: 8px;
+          color: white;
+          font-weight: 500;
+          z-index: 1000;
+          box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+          animation: slideInRight 0.3s ease;
+        `;
+        
+        if (type === 'success') {
+          msgDiv.style.backgroundColor = '#10b981';
+        } else if (type === 'error') {
+          msgDiv.style.backgroundColor = '#ef4444';
+        } else {
+          msgDiv.style.backgroundColor = '#3b82f6';
+        }
+        
+        msgDiv.textContent = message;
+        document.body.appendChild(msgDiv);
+        
+        // Remove after 3 seconds
+        setTimeout(() => {
+          msgDiv.remove();
+        }, 3000);
+      }
 
-      nameEl.addEventListener('dblclick', () => nameEl.setAttribute('contenteditable', 'true'));
-      durEl.addEventListener('dblclick', () => durEl.setAttribute('contenteditable', 'true'));
+      // populate defaults
+      defaults.forEach(s=>container.appendChild(createCard(s)));
 
-      [nameEl, durEl].forEach(el => {
-        el.addEventListener('blur', () => el.setAttribute('contenteditable', 'false'));
+      // Function to update MainPage with new services in real-time
+      async function updateMainPageServices() {
+        try {
+          // Send message to MainPage if it's open in another tab/window
+          if (window.localStorage) {
+            // Store a timestamp to trigger MainPage refresh
+            localStorage.setItem('servicesUpdated', Date.now().toString());
+          }
+          
+          // Also try to directly update if MainPage is accessible
+          const mainPageWindows = window.parent ? [window.parent] : [];
+          mainPageWindows.forEach(win => {
+            try {
+              if (win.refreshServices && typeof win.refreshServices === 'function') {
+                win.refreshServices();
+              }
+            } catch (e) {
+              // Cross-origin or other access issues - ignore
+            }
+          });
+        } catch (err) {
+          console.log('Could not update MainPage:', err);
+        }
+      }
+
+      addBtn.addEventListener('click', async ()=>{
+        const name = document.getElementById('service-name').value.trim() || 'New Service';
+        const duration = document.getElementById('service-duration').value.trim() || '30 min';
+        const price = document.getElementById('service-price').value.trim() || '0';
+        const desc = document.getElementById('service-desc').value.trim() || '';
+        const img = document.getElementById('service-img').value.trim() || 'https://via.placeholder.com/300x180?text=Service';
+
+  // Attempt to POST to backend service create endpoint (admin only)
+  const token = localStorage.getItem('token');
+  // Determine backend base URL. If the frontend is served from a dev server (like Live Server on port 5500),
+  // we need to point to the backend on port 3000. Adjust if your backend runs on a different host/port.
+  const API_BASE = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') ? 'http://localhost:3000' : '';
+        if(!token){
+          showMessage('You must be logged in as an admin to create services. Please log in and try again.', 'error');
+          return;
+        }
+        try{
+          const res = await fetch(API_BASE + '/api/services/test-create', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ service_name: name, description: desc, price: Number(price), duration })
+          });
+
+          // Safely handle responses that might not contain JSON (avoid res.json() throwing)
+          const text = await res.text();
+          let data = {};
+          try{ data = text ? JSON.parse(text) : {}; } catch(e){ data = {}; }
+
+          if(!res.ok){
+            // prefer structured message from server when available
+            throw new Error((data && data.message) || text || res.statusText || 'Failed to create service');
+          }
+          // success: reload all services from database to keep them persistent
+          await loadAllServices(); // This will refresh the entire list
+          document.getElementById('service-name').value = '';
+          document.getElementById('service-duration').value = '';
+          document.getElementById('service-price').value = '';
+          document.getElementById('service-desc').value = '';
+          document.getElementById('service-img').value = '';
+          showMessage('Service created successfully!', 'success');
+          
+          // REAL-TIME SYNC: Update MainPage immediately
+          updateMainPageServices();
+        }catch(err){
+          console.error(err);
+          showMessage('Could not create service: ' + err.message + '. Make sure you are logged in as admin.', 'error');
+        }
       });
-    }
-
-    // Enable remove/edit for existing cards
-    document.querySelectorAll('.booking-card').forEach(attachCardEvents);
-  </script>
-
-</body>
+    </script>
+  </body>
 </html>

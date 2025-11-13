@@ -15,10 +15,10 @@ const serviceService = {
   };
 
   // Create new service
-  serviceService.createServices = async ({ name, description, price, duration }) => {
-    const serviceId = await serviceRepository.addService({ name, description, price, duration });
-    return serviceId;
-  }   
+  serviceService.createServices = async ({ service_name, description, price, duration }) => {
+      const serviceId = await serviceRepository.addService({ service_name, description, price, duration });
+      return serviceId;
+    }   
 
 
 module.exports = serviceService;

@@ -25,13 +25,18 @@ const authenticateToken = (req, res, next) => {
 
 // Check user role
 const requireRole = (allowedRoles) => {
+  // allow passing a single role string or an array of roles
+  const roles = Array.isArray(allowedRoles) ? allowedRoles.map(r=>String(r).toLowerCase()) : [String(allowedRoles).toLowerCase()];
+
   return (req, res, next) => {
     try {
       if (!req.user) {
         throw new ApiError(401, 'Authentication required');
       }
 
-      if (!allowedRoles.includes(req.user.role)) {
+      const userRole = (req.user.role || '').toString().toLowerCase();
+
+      if (!roles.includes(userRole)) {
         throw new ApiError(403, 'Access denied. Insufficient permissions.');
       }
 

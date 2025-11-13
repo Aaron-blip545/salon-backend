@@ -64,6 +64,9 @@ const serviceController = {
         data: result
       });
     } catch (error) {
+      // Minimal logging — avoid leaking SQL, stack traces, or sensitive info in production logs.
+      // Keep the centralized error handler (next) to format responses consistently.
+      console.error('[serviceController.createService] Error:', error && error.message ? error.message : error);
       next(error);
     }
   }
