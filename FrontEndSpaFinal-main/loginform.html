@@ -65,19 +65,40 @@
                 throw new Error(data.message || "Login failed");
               }
 
-              // store token if provided by API
-              const token = data.token || (data.data && data.data.token);
+              // store token and role if provided by API
+              const token = data.token || (data.data && data.data.token) || (data.data && data.data.token);
+              const user = data.user || (data.data && data.data.user);
               if (token) {
                 localStorage.setItem("token", token);
               }
+              if (user && user.role) {
+                localStorage.setItem('role', user.role);
+              }
 
               alert(data.message || "Login successful");
-              window.location.href = "MainPage.html";
+              // If admin, redirect to admin panel; otherwise go to main page
+              const role = (user && user.role) || localStorage.getItem('role');
+              if (role && String(role).toLowerCase() === 'admin') {
+                window.location.href = "adminpanel.html";
+              } else {
+                window.location.href = "MainPage.html";
+              }
             } catch (err) {
               console.error(err);
               alert(err.message || "An error occurred while logging in");
             }
           });
+
+          // Check if token is available and fetch user data
+          const token = localStorage.getItem('token');
+          if (token) {
+            fetch('http://localhost:3000/api/auth/me', {
+              headers: { Authorization: 'Bearer ' + token }
+            })
+              .then(r => r.text().then(t => ({status: r.status, ok: r.ok, text: t})))
+              .then(console.log)
+              .catch(console.error);
+          }
         </script>
       </div>
     </div>

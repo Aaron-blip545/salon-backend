@@ -1,60 +1,126 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Spa Admin Panel</title>
-  <link rel="stylesheet" href="adminpanel2.css">
-</head>
-<body>
-  <!-- Sidebar na part -->
-   <section class="Sidebar" id="Bookings"></section>
-  <div class="sidebar">
-    <h2>Admin Panel</h2>
-    <ul>
-      <li><a href="adminpanel.html"><strong>Bookings</strong></a></li>
-      <li><a href="editservice.html"><strong>Services</strong></a></li>
-      <li><a href="index.html"><strong>Log out</strong></a></li>
-    </ul>
-  </div>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Admin Dashboard — Salon</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="adminpanel.css" />
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  </head>
+  <body>
+    <div class="app" id="app">
+      <aside class="sidebar">
+        <div class="brand">
+          <div class="logo">SB</div>
+          <div class="brand-text">
+            <h3>Salon</h3>
+            <small>Admin</small>
+          </div>
+        </div>
 
-     
-  <div class="main">
-    <!-- Top Header -->
-    <div class="header">
-      <h1>Dashboard</h1>
-      <div class="admin-info">
-        <span>Welcome, Admin</span>
-      </div>
+        <nav class="nav">
+          <a class="nav-item active" href="#">Dashboard</a>
+          <a class="nav-item" href="#bookings">Bookings</a>
+          <a class="nav-item" href="editservice.html">Services</a>
+          <a class="nav-item" href="#analytics">Analytics</a>
+          <a class="nav-item" href="#reports">Reports</a>
+        </nav>
+
+        <div class="sidebar-footer">
+          <a id="logoutBtn" class="nav-item logout" href="#">Log out</a>
+        </div>
+      </aside>
+
+      <main class="main">
+        <header class="main-header">
+          <div class="search-and-title">
+            <h1>Dashboard</h1>
+            <p class="muted">Overview of bookings and performance</p>
+          </div>
+
+          <div class="header-actions">
+            <button id="themeToggle" class="btn toggle" aria-label="Toggle theme">🌙</button>
+            <div class="welcome">Welcome, <strong>Admin</strong></div>
+          </div>
+        </header>
+
+        <section class="content">
+          <div class="grid">
+            <div class="col col-8">
+              <div class="card">
+                <div class="card-header">
+                  <h2>Upcoming Appointments</h2>
+                  <small class="muted">Next 7 days</small>
+                </div>
+                <div class="card-body">
+                  <!-- Empty state shown when there are no bookings -->
+                  <div id="emptyState" class="empty-state">
+                    <div class="empty-illustration">📭</div>
+                    <h3>No bookings yet</h3>
+                    <p class="muted">You don't have any bookings for the selected period. New bookings will appear here.</p>
+                    <div class="empty-actions">
+                      <button id="refreshBtn" class="action-btn confirm">Refresh</button>
+                      <button id="loadSampleBtn" class="action-btn" style="background:transparent;border:1px solid rgba(59,130,246,0.12);">Load sample data</button>
+                    </div>
+                  </div>
+
+                  <div class="table-wrap hidden" id="tableWrap">
+                    <table id="appointmentsTable">
+                      <thead>
+                        <tr>
+                          <th>Client</th>
+                          <th>Service</th>
+                          <th>Date</th>
+                          <th>Time</th>
+                          <th>Status</th>
+                          <th>Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                      
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="col col-4">
+              <div class="card stats">
+                <div class="stat-grid">
+                  <div class="stat">
+                    <div class="stat-title">Total Bookings</div>
+                    <div class="stat-value" id="totalBookings">0</div>
+                  </div>
+                  <div class="stat">
+                    <div class="stat-title">Revenue</div>
+                      <div class="stat-value" id="revenue">₱0</div>
+                  </div>
+                  <div class="stat full">
+                    <canvas id="statusChart" width="300" height="200"></canvas>
+                  </div>
+                </div>
+              </div>
+
+              <div class="card">
+                <div class="card-header">
+                  <h3>Client Statistics</h3>
+                </div>
+                <div class="card-body small-muted">
+                  <p><strong>Active clients:</strong> <span id="activeClients">0</span></p>
+                  <p><strong>New this month:</strong> <span id="newClients">0</span></p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
     </div>
 
-    <!-- Dashboard Cards -->
-     
-    <div class="cards">
-    <!-- Table Section -->
-    <div class="table-section">
-      <h2>Upcoming Appointments</h2>
-      <table>
-        <tr>
-          <th>Client</th>
-          <th>Service</th>
-          <th>Date</th>
-          <th>Time</th>
-        </tr>
-        <tr>
-          <td>Databaseni</td>
-          <td>databaseni</td>
-          <td>databaseni</td>
-          <td>databaseni</td>
-        </tr>
-        <tr>
-          <td>databaseni</td>
-          <td>databaseni</td>
-          <td>databaseni</td>
-          <td>databaseni</td>
-        </tr>
-      </table>
-    </div>
-  </div>
-</body>
+    <script src="adminpanel.js"></script>
+  </body>
 </html>

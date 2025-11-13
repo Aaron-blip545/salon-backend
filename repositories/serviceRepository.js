@@ -17,7 +17,8 @@ const serviceRepository = {
 
   // Create new service
   addService: async ({ service_name, description, price, duration }) => {
-    const sql = `INSERT INTO SERVICES (NAME, DESCRIPTION, PRICE, DURATION, IS_ACTIVE) VALUES (?, ?, ?, ?, 1)`;
+    // The SERVICES table uses SERVICE_NAME as the column for the service title.
+    const sql = `INSERT INTO SERVICES (SERVICE_NAME, DESCRIPTION, PRICE, DURATION, IS_ACTIVE) VALUES (?, ?, ?, ?, 1)`;
     const result = await promisifyQuery(sql, [service_name, description, price, duration]);
     return result.insertId;
   }

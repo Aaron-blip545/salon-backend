@@ -131,5 +131,91 @@
     <div class="loader"></div>
 
     <script src="load.js" defer></script>
+    <script>
+      // Non-destructive service sync: fetch services from backend and append any that
+      // are not already present on the page (so existing hard-coded cards remain).
+      (async function(){
+        
+        async function loadBackendServices() {
+          try{
+            // Use full URL to ensure it hits the backend server
+            const API_BASE = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') ? 'http://localhost:3000' : '';
+            console.log('Loading services from:', API_BASE + '/api/services');
+            const res = await fetch(API_BASE + '/api/services');
+            if(!res.ok) {
+              console.log('API response not OK:', res.status, res.statusText);
+              return;
+            }
+            const data = await res.json();
+            console.log('API response data:', data);
+            const services = Array.isArray(data) ? data : (data && data.data ? data.data : []);
+            if(!services || !services.length) {
+              console.log('No services found in response');
+              return;
+            }
+            console.log('Found', services.length, 'services to process');
+
+            const container = document.querySelector('.booking-options');
+            if(!container) return;
+
+            // Build a set of existing service titles to avoid duplicates
+            const existing = new Set(Array.from(container.querySelectorAll('h3')).map(h=>h.textContent.trim().toLowerCase()));
+
+            services.forEach(s=>{
+              const name = (s.SERVICE_NAME || s.NAME || s.service_name || s.name || '').toString().trim();
+              console.log('Processing service:', name);
+              if(!name) return;
+              if(existing.has(name.toLowerCase())) {
+                console.log('Service already exists, skipping:', name);
+                return; // skip if already on page
+              }
+
+              const img = s.IMAGE_URL || s.IMG || 'images/sig.jpg';
+              const dur = s.DURATION || s.duration || '60 min';
+              const id = s.SERVICE_ID || s.service_id || s.id || '';
+
+              console.log('Adding new service to page:', name);
+              const card = document.createElement('div');
+              card.className = 'booking-card';
+              card.innerHTML = `
+                <img src="${img}" alt="${name}" />
+                <h3>${name}</h3>
+                <p><strong>${dur}</strong></p>
+                <a href="service1.html?service_id=${id}" class="confirm-btn">Book Now</a>
+              `;
+              container.appendChild(card);
+            });
+          }catch(err){
+            console.warn('Could not sync services from API:', err.message);
+          }
+        }
+
+        // Call on page load
+        loadBackendServices();
+        
+        // REAL-TIME UPDATES: Listen for service updates from admin panel
+        window.refreshServices = function() {
+          loadBackendServices();
+        };
+        
+        // Also listen to localStorage changes for cross-tab communication
+        window.addEventListener('storage', function(e) {
+          if (e.key === 'servicesUpdated') {
+            setTimeout(loadBackendServices, 100); // Small delay to ensure DB is updated
+          }
+        });
+        
+        // Check periodically in case localStorage event doesn't fire
+        setInterval(function() {
+          const lastUpdate = localStorage.getItem('servicesUpdated');
+          if (lastUpdate && Date.now() - parseInt(lastUpdate) < 5000) {
+            // If updated in last 5 seconds, refresh
+            loadBackendServices();
+            localStorage.removeItem('servicesUpdated'); // Clear the flag
+          }
+        }, 1000);
+
+      })();
+    </script>
   </body>
 </html>
