@@ -28,7 +28,7 @@ const bookingController = {
       res.status(201).json({
         success: true,
         message: result.message,
-        data: { booking_id: result.booking_id, booking_time: result.booking_time, booking_date: result.booking_date, service_id: result.service_id, user_id: result.user_id, status_name: result.status_name }
+        data: result.details
       });
     } catch (error) {
       next(error);
@@ -146,6 +146,48 @@ const bookingController = {
       res.json({
         success: true,
         message: 'Booking deleted successfully'
+      });
+    } catch (error) {
+      next(error);
+    }
+  },
+
+  // Get analytics data (Admin only)
+  getAnalytics: async (req, res, next) => {
+    try {
+      const bookings = await bookingService.getAllBookings();
+      
+      // Calculate analytics
+      const totalBookings = bookings.length;
+      const pendingBookings = bookings.filter(b => b.booking_status === 'pending').length;
+      const confirmedBookings = bookings.filter(b => b.booking_status === 'confirmed').length;
+      const canceledBookings = bookings.filter(b => b.booking_status === 'canceled').length;
+      
+      // Calculate revenue (confirmed bookings only)
+      const totalRevenue = bookings
+        .filter(b => b.booking_status === 'confirmed')
+        .reduce((sum, b) => sum + (parseFloat(b.service_price) || 0), 0);
+      
+      // Count unique clients
+      const uniqueClients = new Set(bookings.map(b => b.USER_ID)).size;
+      
+      // Get recent bookings (last 10)
+      const recentBookings = bookings.slice(0, 10);
+
+      res.json({
+        success: true,
+        message: 'Analytics retrieved successfully',
+        data: {
+          summary: {
+            totalBookings,
+            pendingBookings,
+            confirmedBookings,
+            canceledBookings,
+            totalRevenue,
+            activeClients: uniqueClients
+          },
+          recentBookings
+        }
       });
     } catch (error) {
       next(error);

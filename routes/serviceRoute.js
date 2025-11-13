@@ -9,9 +9,6 @@ router.get('/:id', serviceController.getServiceById);
 
 // Protected routes (Admin only)
 router.post('/createservice', authenticateToken, requireRole(['admin']), serviceController.createService);
-<<<<<<< HEAD
-=======
-
 // TEMPORARY: Simple test endpoint without auth (REMOVE AFTER TESTING)
 router.post('/test-create', async (req, res) => {
   try {
@@ -61,7 +58,6 @@ router.delete('/:id', async (req, res) => {
     });
   }
 });
->>>>>>> aea3daf43acbd8720b44c819d8f65a473cb4888d
 
 
 

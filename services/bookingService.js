@@ -20,7 +20,14 @@ const bookingService = {
       status_name
     });
 
-    return { booking_id: bookingId };
+    // Fetch full booking details to return to client
+    const bookingDetails = await bookingRepository.findById(bookingId);
+
+    return { 
+      booking_id: bookingId,
+      message: 'Booking created successfully',
+      details: bookingDetails
+    };
   },
 
   // Get user's bookings
@@ -32,6 +39,12 @@ const bookingService = {
   // Get all bookings
   getAllBookings: async () => {
     const bookings = await bookingRepository.findAll();
+    return bookings;
+  },
+
+  // Get pending bookings
+  getPendingBookings: async () => {
+    const bookings = await bookingRepository.findPendingBookings();
     return bookings;
   },
 
@@ -49,10 +62,12 @@ const bookingService = {
 
   // Update booking status
   updateBookingStatus: async ({ booking_id, status, user_id, user_role }) => {
-    // Validate status
-    const validStatuses = Object.values(BOOKING_STATUS);
-    if (!validStatuses.includes(status)) {
-      throw new ApiError(400, 'Invalid status');
+    // Validate status - normalize to lowercase and check
+    const normalizedStatus = status.toLowerCase();
+    const validStatuses = ['pending', 'confirmed', 'completed', 'canceled', 'cancelled'];
+    
+    if (!validStatuses.includes(normalizedStatus)) {
+      throw new ApiError(400, 'Invalid status. Must be: pending, confirmed, completed, or canceled');
     }
 
     // Get booking
@@ -60,8 +75,12 @@ const bookingService = {
     if (!booking) {
       throw new ApiError(404, 'Booking not found');
     }
-    // Update status
-    await bookingRepository.updateStatus(booking_id, status);
+    // Update status with normalized status
+    await bookingRepository.updateStatus(booking_id, normalizedStatus);
+    
+    return {
+      message: 'Booking status updated successfully'
+    };
   },
 
   // Delete booking

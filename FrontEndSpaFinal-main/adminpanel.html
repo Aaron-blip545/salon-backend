@@ -117,6 +117,112 @@
               </div>
             </div>
           </div>
+
+          <!-- Analytics Section (hidden by default) -->
+          <div id="analyticsSection" class="hidden">
+            <div class="grid">
+              <div class="col col-12">
+                <div class="card">
+                  <div class="card-header">
+                    <h2>Revenue Analytics</h2>
+                    <div style="display: flex; gap: 10px;">
+                      <button class="action-btn" id="dailyViewBtn">Daily</button>
+                      <button class="action-btn" id="weeklyViewBtn">Weekly</button>
+                      <button class="action-btn confirm" id="monthlyViewBtn">Monthly</button>
+                    </div>
+                  </div>
+                  <div class="card-body">
+                    <canvas id="revenueChart" height="80"></canvas>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="grid">
+              <div class="col col-6">
+                <div class="card">
+                  <div class="card-header">
+                    <h2>Service Popularity</h2>
+                  </div>
+                  <div class="card-body">
+                    <canvas id="serviceChart" height="200"></canvas>
+                  </div>
+                </div>
+              </div>
+
+              <div class="col col-6">
+                <div class="card">
+                  <div class="card-header">
+                    <h2>Peak Booking Times</h2>
+                  </div>
+                  <div class="card-body">
+                    <canvas id="peakTimesChart" height="200"></canvas>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="grid">
+              <div class="col col-12">
+                <div class="card">
+                  <div class="card-header">
+                    <h2>Booking Trends</h2>
+                  </div>
+                  <div class="card-body">
+                    <canvas id="trendsChart" height="80"></canvas>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Reports Section (hidden by default) -->
+          <div id="reportsSection" class="hidden">
+            <div class="grid">
+              <div class="col col-12">
+                <div class="card">
+                  <div class="card-header">
+                    <h2>Generate Reports</h2>
+                  </div>
+                  <div class="card-body">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
+                      <div>
+                        <label style="display: block; margin-bottom: 8px; font-weight: 600;">Start Date</label>
+                        <input type="date" id="reportStartDate" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 8px;">
+                      </div>
+                      <div>
+                        <label style="display: block; margin-bottom: 8px; font-weight: 600;">End Date</label>
+                        <input type="date" id="reportEndDate" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 8px;">
+                      </div>
+                    </div>
+                    
+                    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                      <button class="action-btn confirm" id="exportCSVBtn">📊 Export to CSV</button>
+                      <button class="action-btn confirm" id="exportExcelBtn">📈 Export to Excel</button>
+                      <button class="action-btn" id="generatePDFBtn">📄 Generate PDF Report</button>
+                      <button class="action-btn" id="revenueReportBtn">💰 Revenue by Service</button>
+                      <button class="action-btn" id="customerHistoryBtn">👥 Customer History</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="grid">
+              <div class="col col-12">
+                <div class="card">
+                  <div class="card-header">
+                    <h2>Report Preview</h2>
+                  </div>
+                  <div class="card-body">
+                    <div id="reportPreview">
+                      <p class="muted">Select date range and click a report button to generate preview</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </section>
       </main>
     </div>

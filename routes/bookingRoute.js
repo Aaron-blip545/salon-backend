@@ -13,6 +13,7 @@ router.delete('/:id', authenticateToken, bookingController.deleteBooking);
 // Admin routes
 router.get('/all', authenticateToken, requireRole(['admin']), bookingController.getAllBookings);
 router.get('/pending', authenticateToken, requireRole(['admin']), bookingController.getPendingBookings);
+router.get('/analytics', authenticateToken, requireRole(['admin']), bookingController.getAnalytics);
 router.patch('/:id/status', authenticateToken, requireRole(['admin']), bookingController.updateBookingStatus);
 
 

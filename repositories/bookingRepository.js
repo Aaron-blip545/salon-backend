@@ -67,11 +67,82 @@ const bookingRepository = {
     return results;
   },
 
+  // Find all bookings with full details (for admin)
+  findAll: async () => {
+    const sql = `
+      SELECT
+        b.BOOKING_ID,
+        b.BOOKING_DATE,
+        b.BOOKING_TIME,
+        b.STATUS_NAME as booking_status,
+        b.USER_ID,
+        COALESCE(u.NAME, 'Guest') as client_name,
+        u.EMAIL_ADDRESS as client_email,
+        s.SERVICE_NAME,
+        s.DESCRIPTION as service_description,
+        s.PRICE as service_price,
+        s.DURATION as service_duration
+      FROM bookings b
+      LEFT JOIN user u ON b.USER_ID = u.USER_ID
+      LEFT JOIN services s ON b.SERVICE_ID = s.SERVICE_ID
+      ORDER BY b.BOOKING_DATE DESC, b.BOOKING_TIME DESC
+    `;
+    const results = await promisifyQuery(sql, []);
+    return results;
+  },
+
+  // Find booking by ID with full details
+  findById: async (booking_id) => {
+    const sql = `
+      SELECT
+        b.BOOKING_ID,
+        b.BOOKING_DATE,
+        b.BOOKING_TIME,
+        b.STATUS_NAME as booking_status,
+        b.USER_ID,
+        COALESCE(u.NAME, 'Guest') as client_name,
+        u.EMAIL_ADDRESS as client_email,
+        s.SERVICE_ID,
+        s.SERVICE_NAME,
+        s.DESCRIPTION as service_description,
+        s.PRICE as service_price,
+        s.DURATION as service_duration
+      FROM bookings b
+      LEFT JOIN user u ON b.USER_ID = u.USER_ID
+      LEFT JOIN services s ON b.SERVICE_ID = s.SERVICE_ID
+      WHERE b.BOOKING_ID = ?
+    `;
+    const results = await promisifyQuery(sql, [booking_id]);
+    return results.length > 0 ? results[0] : null;
+  },
+
+  // Get pending bookings (for admin)
+  findPendingBookings: async () => {
+    const sql = `
+      SELECT
+        b.BOOKING_ID,
+        b.BOOKING_DATE,
+        b.BOOKING_TIME,
+        b.STATUS_NAME as booking_status,
+        b.USER_ID,
+        COALESCE(u.NAME, 'Guest') as client_name,
+        u.EMAIL_ADDRESS as client_email,
+        s.SERVICE_NAME,
+        s.PRICE as service_price
+      FROM bookings b
+      LEFT JOIN user u ON b.USER_ID = u.USER_ID
+      LEFT JOIN services s ON b.SERVICE_ID = s.SERVICE_ID
+      WHERE b.STATUS_NAME = 'pending'
+      ORDER BY b.BOOKING_DATE ASC, b.BOOKING_TIME ASC
+    `;
+    const results = await promisifyQuery(sql, []);
+    return results;
+  },
+
   // Update booking status
   updateStatus: async (booking_id, status_name) => {
-    const status_id = await bookingRepository.getStatusId(status_name);
-    const sql = 'UPDATE bookings SET STATUS_ID = ? WHERE BOOKING_ID = ?';
-    await promisifyQuery(sql, [status_id, booking_id]);
+    const sql = 'UPDATE bookings SET STATUS_NAME = ? WHERE BOOKING_ID = ?';
+    await promisifyQuery(sql, [status_name, booking_id]);
   },
 
   // Delete booking

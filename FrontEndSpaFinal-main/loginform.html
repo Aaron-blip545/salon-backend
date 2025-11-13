@@ -65,19 +65,38 @@
                 throw new Error(data.message || "Login failed");
               }
 
+              // Clear any existing auth data first
+              localStorage.clear();
+              
               // store token and role if provided by API
-              const token = data.token || (data.data && data.data.token) || (data.data && data.data.token);
-              const user = data.user || (data.data && data.data.user);
+              const token = data.token || (data.data && data.data.token);
+              const user = data.data?.user || data.user;
+              
               if (token) {
                 localStorage.setItem("token", token);
+                localStorage.setItem("authToken", token);
+                localStorage.setItem("jwt", token);
               }
-              if (user && user.role) {
-                localStorage.setItem('role', user.role);
+              
+              if (user) {
+                if (user.role) {
+                  localStorage.setItem('role', user.role);
+                }
+                if (user.id) {
+                  localStorage.setItem('userId', user.id);
+                }
+                if (user.name) {
+                  localStorage.setItem('userName', user.name);
+                }
+                if (user.email) {
+                  localStorage.setItem('userEmail', user.email);
+                }
               }
 
               alert(data.message || "Login successful");
+              
               // If admin, redirect to admin panel; otherwise go to main page
-              const role = (user && user.role) || localStorage.getItem('role');
+              const role = user?.role || localStorage.getItem('role');
               if (role && String(role).toLowerCase() === 'admin') {
                 window.location.href = "adminpanel.html";
               } else {
