@@ -4,9 +4,9 @@ const { BOOKING_STATUS, BUSINESS_HOURS } = require('../utils/constant');
 
 const bookingService = {
   // Create new booking
-  createBooking: async ({ user_id, service_id, booking_date, booking_time, status_name}) => {
-    // Check if time slot is available
-    const isAvailable = await bookingRepository.isTimeSlotAvailable(booking_date, booking_time);
+  createBooking: async ({ user_id, service_id, staff_id, booking_date, booking_time, status_name }) => {
+    // Check if time slot is available for this staff
+    const isAvailable = await bookingRepository.isTimeSlotAvailable(booking_date, booking_time, staff_id);
     if (!isAvailable) {
       throw new ApiError(409, 'Time slot already booked');
     }
@@ -15,9 +15,11 @@ const bookingService = {
     const bookingId = await bookingRepository.create({
       user_id,
       service_id,
+      staff_id,
       booking_date,
       booking_time,
-      status_name
+      status_name,
+      payment_status: 'pending'
     });
 
     // Fetch full booking details to return to client

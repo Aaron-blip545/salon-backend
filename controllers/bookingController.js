@@ -1,34 +1,43 @@
 const { isTimeSlotAvailable } = require('../repositories/bookingRepository');
 const bookingService = require('../services/bookingService');
 const ApiError = require('../utils/ApiError');
+const path = require('path');
 
 const bookingController = {
   // Create new booking
   createBooking: async (req, res, next) => {
     try {
-      const { service_id, booking_date, booking_time, status_name} = req.body;
+      const { service_id, booking_date, booking_time, staff_id } = req.body;
       const user_id = req.user.id;
 
-       //Validate required fields
-      if (!service_id || !booking_date ||! booking_time) {
-        throw new ApiError(400, 'Service, date, and time are required');
-     }
-      if (!isTimeSlotAvailable(booking_date, booking_time)) {
+      // Validate required fields
+      if (!service_id || !booking_date || !booking_time || !staff_id) {
+        throw new ApiError(400, 'Service, date, time, and staff are required');
+      }
+
+      // Check if time slot is available for this staff
+      if (!(await isTimeSlotAvailable(booking_date, booking_time, staff_id))) {
         throw new ApiError(400, 'The selected time slot has been already booked');
       }
       
+      // Create booking with pending payment status
       const result = await bookingService.createBooking({
         user_id,
         service_id,
+        staff_id,
         booking_date,
-        booking_time, 
-        status_name: 'pending' 
+        booking_time,
+        status_name: 'pending_payment' // New status to indicate payment is pending
       });
 
+      // Return payment URL in the response
       res.status(201).json({
         success: true,
-        message: result.message,
-        data: result.details
+        message: 'Booking created. Please complete the payment to confirm your booking.',
+        data: {
+          ...result.details,
+          payment_url: `/payment/${result.booking_id}`
+        }
       });
     } catch (error) {
       next(error);
@@ -41,10 +50,17 @@ const bookingController = {
       const user_id = req.user.id;
       const bookings = await bookingService.getUserBookings(user_id);
 
+      // Add payment status to each booking
+      const bookingsWithPaymentStatus = bookings.map(booking => ({
+        ...booking,
+        payment_status: booking.payment_status || 'pending',
+        requires_payment: booking.booking_status === 'pending_payment'
+      }));
+
       res.json({
         success: true,
         message: 'Bookings retrieved successfully',
-        data: bookings
+        data: bookingsWithPaymentStatus
       });
     } catch (error) {
       next(error);

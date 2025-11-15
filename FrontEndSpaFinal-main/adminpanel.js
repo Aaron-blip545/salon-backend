@@ -68,6 +68,15 @@
         const tr = document.createElement('tr');
         const statusClass = (appt.status || 'pending').toLowerCase();
         const statusText = capitalizeFirst(appt.status || 'pending');
+
+        const paymentStatusClass = (appt.paymentStatus || 'pending').toLowerCase();
+        const paymentStatusText = capitalizeFirst(appt.paymentStatus || 'pending');
+
+        const paymentMethodLabel = appt.paymentMethod
+          ? (String(appt.paymentMethod).toUpperCase() === 'GCASH'
+              ? 'GCash'
+              : capitalizeFirst(String(appt.paymentMethod).toLowerCase()))
+          : '—';
         
         // Determine if actions should be shown
         const isConfirmed = appt.status === 'confirmed';
@@ -80,6 +89,17 @@
           <td>${escapeHtml(formatDate(appt.date))}</td>
           <td>${escapeHtml(appt.time)}</td>
           <td><span class="badge ${statusClass}">${statusText}</span></td>
+          <td><span class="badge payment-${paymentStatusClass}">${paymentStatusText}</span></td>
+          <td>${escapeHtml(paymentMethodLabel)}</td>
+          <td>
+            ${appt.receiptImage
+              ? `<a href="${appt.receiptImage}" target="_blank">
+                   <img src="${appt.receiptImage}"
+                        alt="Receipt"
+                        style="width:48px;height:48px;object-fit:cover;border-radius:4px;border:1px solid #e5e7eb;" />
+                 </a>`
+              : '<span class="muted" style="font-size:12px;">No proof</span>'}
+          </td>
           <td>
             ${showActions ? `
               <button class="action-btn confirm" data-id="${appt.id}">Confirm</button>

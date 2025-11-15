@@ -110,9 +110,10 @@ function updateSubmitButton() {
     if (selectedPayment === 'CASH') {
         submitBtn.disabled = false;
         submitBtn.textContent = 'Confirm Booking (Pay Cash on Service Day)';
-    } else if (selectedPayment === 'ONLINE' && selectedProvider) {
+    } else if (selectedPayment === 'ONLINE') {
+        // Only GCash is supported
         submitBtn.disabled = false;
-        submitBtn.textContent = `Proceed to Payment via ${selectedProvider.toUpperCase()}`;
+        submitBtn.textContent = 'Upload GCash Receipt';
     } else {
         submitBtn.disabled = true;
         submitBtn.textContent = 'Select Payment Method';
@@ -124,11 +125,7 @@ document.getElementById('submit-btn').addEventListener('click', async function()
     if (selectedPayment === 'CASH') {
         await processCashPayment();
     } else if (selectedPayment === 'ONLINE') {
-        if (selectedProvider === 'gcash') {
-            await processGCashPayment();
-        } else {
-            alert(`${selectedProvider.toUpperCase()} integration coming soon!`);
-        }
+        await processGCashPayment();
     }
 });
 
@@ -174,40 +171,69 @@ async function processCashPayment() {
     }
 }
 
-// Process GCash payment
+// Process GCash payment: upload receipt for existing booking
 async function processGCashPayment() {
     const loadingEl = document.getElementById('loading');
     const submitBtn = document.getElementById('submit-btn');
-    
+    const fileInput = document.getElementById('receipt-file');
+
+    if (!fileInput || !fileInput.files.length) {
+        alert('Please upload a screenshot/photo of your GCash receipt first.');
+        return;
+    }
+
+    const file = fileInput.files[0];
+
+    if (!bookingDetails || !bookingDetails.booking_id) {
+        alert('Missing booking information. Please re-book the service.');
+        return;
+    }
+
     loadingEl.classList.add('active');
     submitBtn.disabled = true;
 
     try {
-        // For GCash: Don't create booking yet. Just store booking details and redirect to checkout.
-        // The checkout page (gcash-checkout.html) will create the booking after payment succeeds.
-        
-        // Store booking details in sessionStorage for gcash-checkout.html to use
-        sessionStorage.setItem('pendingBooking', JSON.stringify({
-            service_id: bookingDetails.service_id,
-            booking_date: bookingDetails.booking_date,
-            booking_time: bookingDetails.booking_time,
-            price: bookingDetails.price
-        }));
-        
-        // Build checkout URL with booking details as query params
-        const checkoutUrl = `gcash-checkout.html?service_id=${encodeURIComponent(bookingDetails.service_id)}&booking_date=${encodeURIComponent(bookingDetails.booking_date)}&booking_time=${encodeURIComponent(bookingDetails.booking_time)}&amount=${encodeURIComponent(bookingDetails.price)}`;
-        
-        // Redirect to checkout (keep pendingBooking in sessionStorage for checkout page to use)
-        sessionStorage.removeItem('bookingDetails');
-        window.location.href = checkoutUrl;
+        const formData = new FormData();
+        formData.append('receipt', file);
 
+        const response = await fetch(`${API_BASE_URL}/payments/${bookingDetails.booking_id}/receipt`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${getToken()}`
+            },
+            body: formData
+        });
+
+        const data = await response.json();
+
+        if (!response.ok || !data.success) {
+            throw new Error(data.message || 'Failed to upload receipt');
+        }
+
+        sessionStorage.removeItem('bookingDetails');
+        sessionStorage.setItem(
+            'bookingSuccess',
+            'GCash payment receipt uploaded successfully. Your payment will be verified by the admin.'
+        );
+        window.location.href = 'bookedservices.html';
     } catch (error) {
         console.error('Error:', error);
-        alert('Payment failed. Please try again.');
+        alert(error.message || 'Payment failed. Please try again.');
     } finally {
         loadingEl.classList.remove('active');
         submitBtn.disabled = false;
     }
+}
+
+// Wire receipt file name display
+const receiptInput = document.getElementById('receipt-file');
+const receiptNameEl = document.getElementById('receipt-file-name');
+if (receiptInput && receiptNameEl) {
+    receiptInput.addEventListener('change', () => {
+        receiptNameEl.textContent = receiptInput.files.length
+            ? receiptInput.files[0].name
+            : 'No file selected';
+    });
 }
 
 // Initialize on page load

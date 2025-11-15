@@ -1,42 +1,43 @@
 const db = require('../config/db');
 const { promisifyQuery } = require('../utils/dbHelpers');
 
-
 const bookingRepository = {
-//Create new booking
-
-  create: async ({ user_id, service_id, booking_date, booking_time, status_name }) => {
-
+  // Create new booking
+  create: async ({ user_id, service_id, staff_id, booking_date, booking_time, status_name, payment_status = 'pending' }) => {
     const sql = `
-      INSERT INTO bookings (USER_ID, SERVICE_ID, BOOKING_DATE, BOOKING_TIME, STATUS_NAME) 
-      VALUES (?, ?, ?, ?, ?)
+      INSERT INTO bookings (USER_ID, SERVICE_ID, STAFF_ID, BOOKING_DATE, BOOKING_TIME, STATUS_NAME, PAYMENT_STATUS) 
+      VALUES (?, ?, ?, ?, ?, ?, ?)
     `;
-    const result = await promisifyQuery(sql, [user_id, service_id, booking_date, booking_time, status_name]);
+    const result = await promisifyQuery(sql, [user_id, service_id, staff_id, booking_date, booking_time, status_name, payment_status]);
     return result.insertId;
-  } ,
+  },
 
   // Get booking by ID
   // Check if time slot is available
-  isTimeSlotAvailable: async (booking_date, booking_time) => {
+  isTimeSlotAvailable: async (booking_date, booking_time, staff_id) => {
     const sql = `
       SELECT COUNT(*) as count 
       FROM bookings b
       WHERE b.BOOKING_DATE = ?
       AND b.BOOKING_TIME = ?
+      AND b.STAFF_ID = ?
+      AND b.STATUS_NAME IN ('pending', 'pending_payment', 'confirmed')
     `;
-    const results = await promisifyQuery(sql, [booking_date, booking_time]);
+    const results = await promisifyQuery(sql, [booking_date, booking_time, staff_id]);
     return results[0].count === 0;
   },
 
   // Get booked slots for a date
-  getBookedSlots: async (date) => {
+  getBookedSlots: async (date, staff_id) => {
     const sql = `
-      SELECT TIME(b.BOOKING_DATE) as BOOKING_TIME
+      SELECT b.BOOKING_TIME
       FROM bookings b
-      WHERE DATE(b.BOOKING_DATE) = ?
-      AND b.STATUS_NAME IN ('pending', 'confirmed')
+      WHERE b.BOOKING_DATE = ?
+      AND b.STATUS_NAME IN ('pending', 'pending_payment', 'confirmed')
+      ${staff_id ? 'AND b.STAFF_ID = ?' : ''}
     `;
-    const results = await promisifyQuery(sql, [date]);
+    const params = staff_id ? [date, staff_id] : [date];
+    const results = await promisifyQuery(sql, params);
     return results.map(r => r.BOOKING_TIME);
   },
 
@@ -48,8 +49,13 @@ const bookingRepository = {
         b.BOOKING_DATE,
         b.BOOKING_TIME,
         b.STATUS_NAME as booking_status,
+        b.PAYMENT_STATUS,
+        b.RECEIPT_IMAGE,
+        b.STAFF_ID,
+        st.FULL_NAME as staff_name,
         s.SERVICE_NAME,
         s.PRICE as service_price,
+
         t.AMOUNT as paid_amount,
         t.PRICE as transaction_price,
         t.BOOKING_FEE as booking_fee,
@@ -59,6 +65,8 @@ const bookingRepository = {
       FROM bookings b
       LEFT JOIN services s ON b.SERVICE_ID = s.SERVICE_ID
       LEFT JOIN transactions t ON t.BOOKING_ID = b.BOOKING_ID
+      LEFT JOIN staff st ON b.STAFF_ID = st.STAFF_ID
+
       WHERE b.USER_ID = ?
       ORDER BY b.BOOKING_DATE DESC, b.BOOKING_TIME DESC
     `;
@@ -75,18 +83,26 @@ const bookingRepository = {
         b.BOOKING_DATE,
         b.BOOKING_TIME,
         b.STATUS_NAME as booking_status,
+        b.PAYMENT_STATUS,
+        b.RECEIPT_IMAGE,
         b.USER_ID,
         COALESCE(u.NAME, 'Guest') as client_name,
         u.EMAIL_ADDRESS as client_email,
+        b.STAFF_ID,
+        st.FULL_NAME as staff_name,
         s.SERVICE_NAME,
         s.DESCRIPTION as service_description,
         s.PRICE as service_price,
-        s.DURATION as service_duration
+        s.DURATION as service_duration,
+        t.PAYMENT_METHOD
       FROM bookings b
       LEFT JOIN user u ON b.USER_ID = u.USER_ID
       LEFT JOIN services s ON b.SERVICE_ID = s.SERVICE_ID
+      LEFT JOIN staff st ON b.STAFF_ID = st.STAFF_ID
+      LEFT JOIN transactions t ON t.BOOKING_ID = b.BOOKING_ID
       ORDER BY b.BOOKING_DATE DESC, b.BOOKING_TIME DESC
     `;
+
     const results = await promisifyQuery(sql, []);
     return results;
   },
@@ -102,6 +118,8 @@ const bookingRepository = {
         b.USER_ID,
         COALESCE(u.NAME, 'Guest') as client_name,
         u.EMAIL_ADDRESS as client_email,
+        b.STAFF_ID,
+        st.FULL_NAME as staff_name,
         s.SERVICE_ID,
         s.SERVICE_NAME,
         s.DESCRIPTION as service_description,
@@ -110,7 +128,9 @@ const bookingRepository = {
       FROM bookings b
       LEFT JOIN user u ON b.USER_ID = u.USER_ID
       LEFT JOIN services s ON b.SERVICE_ID = s.SERVICE_ID
+      LEFT JOIN staff st ON b.STAFF_ID = st.STAFF_ID
       WHERE b.BOOKING_ID = ?
+
     `;
     const results = await promisifyQuery(sql, [booking_id]);
     return results.length > 0 ? results[0] : null;
@@ -127,12 +147,16 @@ const bookingRepository = {
         b.USER_ID,
         COALESCE(u.NAME, 'Guest') as client_name,
         u.EMAIL_ADDRESS as client_email,
+        b.STAFF_ID,
+        st.FULL_NAME as staff_name,
         s.SERVICE_NAME,
         s.PRICE as service_price
       FROM bookings b
       LEFT JOIN user u ON b.USER_ID = u.USER_ID
       LEFT JOIN services s ON b.SERVICE_ID = s.SERVICE_ID
+      LEFT JOIN staff st ON b.STAFF_ID = st.STAFF_ID
       WHERE b.STATUS_NAME = 'pending'
+
       ORDER BY b.BOOKING_DATE ASC, b.BOOKING_TIME ASC
     `;
     const results = await promisifyQuery(sql, []);

@@ -59,31 +59,52 @@
             </div>
 
             <div class="payment-option" id="online-option">
-              <div class="payment-icon">💳</div>
-              <div class="option-title">Online Payment</div>
-              <div class="option-description">Pay securely now</div>
+              <div class="payment-icon">📱</div>
+              <div class="option-title">GCash</div>
+              <div class="option-description">Pay via GCash QR</div>
               <div class="check-icon">✓</div>
             </div>
           </div>
 
-          <!-- Online Payment Details -->
+          <!-- GCash Payment Details -->
           <div class="online-payment-details" id="online-details">
-            <h4 style="margin-bottom: 15px; color: #333">
-              Choose Payment Provider
-            </h4>
-            <div class="payment-providers">
-              <button class="provider-btn" data-provider="gcash">GCash</button>
-              <button class="provider-btn" data-provider="paymaya">
-                PayMaya
-              </button>
-              <button class="provider-btn" data-provider="card">Card</button>
-            </div>
+            <h4 style="margin-bottom: 15px; color: #333">GCash Payment</h4>
             <div class="info-box">
               <strong>ℹ️ How it works:</strong><br />
-              1. Click "Proceed to Payment"<br />
-              2. You'll be redirected to secure payment page<br />
-              3. Complete payment with your chosen provider<br />
-              4. Receive confirmation once successful
+              1. Open your GCash app<br />
+              2. Tap "Scan QR"<br />
+              3. Scan the QR code below<br />
+              4. Pay the exact amount shown in the summary<br />
+              5. Upload a screenshot/photo of your GCash receipt
+            </div>
+
+            <div style="margin-top: 20px; text-align: center;">
+              <img
+                src="images/gcash-qr.jpg"
+                alt="GCash QR Code"
+                style="max-width: 260px; border-radius: 12px; border: 1px solid #eee; background: #fff;"
+              />
+              <p style="font-size: 12px; color: #666; margin-top: 8px;">
+                Scan this QR with your GCash app.
+              </p>
+            </div>
+
+            <div style="margin-top: 20px; text-align: left;">
+              <label for="receipt-file" style="font-weight: 600; font-size: 14px;">
+                Upload payment receipt (screenshot/photo)
+              </label>
+              <input
+                id="receipt-file"
+                type="file"
+                accept="image/*"
+                style="margin-top: 8px; width: 100%;"
+              />
+              <p
+                id="receipt-file-name"
+                style="font-size: 12px; color: #666; margin-top: 4px;"
+              >
+                No file selected
+              </p>
             </div>
           </div>
 

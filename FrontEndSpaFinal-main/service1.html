@@ -76,6 +76,9 @@
       }
 
       // Display service details
+      let selectedStaffId = null;
+      let selectedTimeSlot = null;
+
       function displayService(service) {
         const mainContent = document.getElementById("mainContent");
         mainContent.innerHTML = `
@@ -118,8 +121,9 @@
                         <label for="bookDate">Pick a date</label>
                         <input id="bookDate" name="bookDate" type="date" required />
 
-                        <label for="bookTime">Preferred time (optional)</label>
-                        <input id="bookTime" name="bookingTime" type="time" />
+                        <p class="small">
+                          Select your preferred staff and time slot after choosing a date.
+                        </p>
 
                         <div class="form-actions">
                             <button id="clearBtn" type="button" class="clearBtn">Clear</button>
@@ -129,10 +133,162 @@
                         <p id="chosen" class="chosen" aria-live="polite"></p>
                     </form>
                 </section>
+
+                <!-- STAFF SELECTION -->
+                <section class="card" id="staffSection">
+                    <h2>Select Staff</h2>
+                    <p class="small">Choose your preferred staff member for this service.</p>
+                    <div id="staffList" style="margin-top:10px;">Loading staff...</div>
+                </section>
+
+                <!-- TIME SLOTS -->
+                <section class="card" id="timeSlotsSection" style="display:none;">
+                    <h2>Available Time Slots</h2>
+                    <p class="small" id="selectedStaffLabel"></p>
+                    <div id="timeSlotsGrid" style="margin-top:10px;display:flex;flex-wrap:wrap;gap:8px;"></div>
+                </section>
             `;
 
         // Initialize form handlers after content is loaded
         initializeFormHandlers();
+        loadStaff();
+      }
+
+      async function loadStaff() {
+        try {
+          const res = await fetch(`${API_BASE}/staff`);
+          const data = await res.json();
+          const staffListEl = document.getElementById("staffList");
+
+          if (!data.success || !data.data || !data.data.length) {
+            staffListEl.textContent = "No staff available.";
+            return;
+          }
+
+          staffListEl.innerHTML = data.data
+            .map(
+              (s) => `
+      <button class="staff-btn" data-staff-id="${s.staff_id}"
+        style="border:1px solid #ccc;border-radius:8px;padding:8px 10px;margin:4px;cursor:pointer;background:#f9f9f9;">
+        <div style="font-weight:600;">${s.full_name}</div>
+        <div style="font-size:12px;color:#666;">
+          ${s.role || "Massage Therapist"}${s.gender ? " • " + s.gender : ""}
+        </div>
+      </button>`
+            )
+            .join("");
+
+          document.querySelectorAll(".staff-btn").forEach((btn) => {
+            btn.addEventListener("click", () => {
+              document
+                .querySelectorAll(".staff-btn")
+                .forEach((b) => b.classList.remove("selected"));
+              btn.classList.add("selected");
+              selectedStaffId = btn.getAttribute("data-staff-id");
+              document.getElementById("timeSlotsSection").style.display = "block";
+              document.getElementById("selectedStaffLabel").textContent =
+                "Available times for " + btn.textContent.trim();
+
+              const dateVal = document.getElementById("bookDate").value;
+              if (dateVal) {
+                loadTimeSlots(dateVal);
+              }
+            });
+          });
+        } catch (e) {
+          console.error("Error loading staff", e);
+          document.getElementById("staffList").textContent =
+            "Failed to load staff.";
+        }
+      }
+
+      function formatTimeToAmPm(time) {
+        const [h, m] = time.split(":");
+        let hour = parseInt(h, 10);
+        const meridiem = hour >= 12 ? "PM" : "AM";
+        const displayHour = hour % 12 || 12;
+        return `${displayHour}:${m} ${meridiem}`;
+      }
+
+      async function loadTimeSlots(date) {
+        if (!selectedStaffId) return;
+        const grid = document.getElementById("timeSlotsGrid");
+        grid.innerHTML = "Loading slots...";
+
+        try {
+          const res = await fetch(
+            `${API_BASE}/bookings/available-slots?date=${encodeURIComponent(
+              date
+            )}`
+          );
+          const data = await res.json();
+          if (!data.success) throw new Error(data.message || "Failed to load slots");
+
+          const booked = new Set(data.data.booked_slots || []);
+          const hours = [
+            "09:00",
+            "10:00",
+            "11:00",
+            "12:00",
+            "13:00",
+            "14:00",
+            "15:00",
+            "16:00",
+            "17:00",
+            "18:00",
+            "19:00",
+          ];
+
+          grid.innerHTML = "";
+          hours.forEach((time) => {
+            const isBooked = booked.has(time);
+            const btn = document.createElement("button");
+            btn.textContent = formatTimeToAmPm(time);
+            btn.setAttribute("data-time", time);
+
+            // base style for all buttons
+            btn.style.cssText =
+              "padding:6px 10px;border-radius:6px;border:1px solid #ccc;cursor:pointer;font-size:13px;background:#f8f9fa;color:#333;min-width:70px;";
+
+            if (isBooked) {
+              // booked (red) and disabled
+              btn.disabled = true;
+              btn.style.background = "#fde2e2"; // light red
+              btn.style.color = "#a33";
+              btn.style.borderColor = "#f28b82";
+              btn.title = "Already booked";
+            } else {
+              // available: clicking marks as selected (green)
+              btn.addEventListener("click", () => {
+                document
+                  .querySelectorAll("#timeSlotsGrid button")
+                  .forEach((b) => {
+                    if (b.disabled) {
+                      // keep booked style
+                      b.style.background = "#fde2e2";
+                      b.style.color = "#a33";
+                      b.style.borderColor = "#f28b82";
+                    } else {
+                      // reset available style
+                      b.style.background = "#f8f9fa";
+                      b.style.color = "#333";
+                      b.style.borderColor = "#ccc";
+                    }
+                  });
+
+                // selected (green)
+                btn.style.background = "#c8f7c5"; // light green
+                btn.style.borderColor = "#2ecc71";
+                btn.style.color = "#1b5e20";
+                selectedTimeSlot = btn.getAttribute("data-time");
+              });
+            }
+            grid.appendChild(btn);
+          });
+        } catch (e) {
+          console.error("Error loading slots", e);
+          grid.textContent = "Failed to load time slots.";
+        }
       }
 
       // Show error message
@@ -152,7 +308,6 @@
       // Initialize form event handlers
       function initializeFormHandlers() {
         const bookingDate = document.getElementById("bookDate");
-        const bookingTime = document.getElementById("bookTime");
         const chosen = document.getElementById("chosen");
         const form = document.getElementById("dateForm");
         const clearBtn = document.getElementById("clearBtn");
@@ -181,23 +336,34 @@
           updateChosen();
         });
 
-        // Update chosen display when time changes
-        bookingTime.addEventListener("change", updateChosen);
-
         // Clear button
         clearBtn.addEventListener("click", () => {
           bookingDate.value = "";
-          bookingTime.value = "";
           chosen.textContent = "";
+          selectedStaffId = null;
+          selectedTimeSlot = null;
+          const staffListEl = document.getElementById("staffList");
+          const timeSlotsGrid = document.getElementById("timeSlotsGrid");
+          const timeSlotsSection = document.getElementById("timeSlotsSection");
+          if (staffListEl) {
+            staffListEl.querySelectorAll(".staff-btn").forEach((b) =>
+              b.classList.remove("selected")
+            );
+          }
+          if (timeSlotsGrid) {
+            timeSlotsGrid.innerHTML = "";
+          }
+          if (timeSlotsSection) {
+            timeSlotsSection.style.display = "none";
+          }
         });
 
         // Update chosen display
         function updateChosen() {
           const dateInput = bookingDate.value;
-          const timeInput = bookingTime.value;
 
-          if (dateInput && timeInput) {
-            const combined = `${dateInput} ${timeInput}`;
+          if (dateInput && selectedTimeSlot) {
+            const combined = `${dateInput} ${selectedTimeSlot}`;
             chosen.dataset.datetime = combined;
 
             const date = new Date(combined);
@@ -223,15 +389,18 @@
           e.preventDefault();
 
           const date = bookingDate.value;
-          const time = bookingTime.value;
 
           // Validate inputs
           if (!date) {
             alert("Please select a date first!");
             return;
           }
-          if (!time) {
-            alert("Please select a time first!");
+          if (!selectedStaffId) {
+            alert("Please select a staff member.");
+            return;
+          }
+          if (!selectedTimeSlot) {
+            alert("Please select a time slot.");
             return;
           }
 
@@ -243,27 +412,38 @@
             return;
           }
 
-          // Prepare booking data
           const bookingData = {
             service_id: currentService.SERVICE_ID,
             booking_date: date,
-            booking_time: time + ":00",
+            booking_time: selectedTimeSlot,
+            staff_id: selectedStaffId,
           };
 
-          console.log("Sending booking:", bookingData);
-
           try {
-            // Try to get username from localStorage or user data
-            let username =
+            const resp = await fetch(`${API_BASE}/bookings`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${token}`,
+              },
+              body: JSON.stringify(bookingData),
+            });
+
+            const result = await resp.json();
+            if (!resp.ok || !result.success) {
+              throw new Error(result.message || "Failed to create booking");
+            }
+
+            const created = result.data || {};
+            const username =
+              localStorage.getItem("userName") ||
               localStorage.getItem("username") ||
-              localStorage.getItem("name") ||
               "Guest";
 
-            // Flow: Booking -> Payment Selection -> Payment -> Save Booking
-            // Store booking details in sessionStorage for payment page
             sessionStorage.setItem(
               "bookingDetails",
               JSON.stringify({
+                booking_id: created.BOOKING_ID || created.booking_id,
                 service_id: bookingData.service_id,
                 service_name: currentService.SERVICE_NAME,
                 booking_date: bookingData.booking_date,
@@ -273,11 +453,10 @@
               })
             );
 
-            // Redirect to payment method selection page
             window.location.href = "paymentmethod.html";
           } catch (error) {
-            console.error("Redirect to payment error:", error);
-            alert("❌ Could not start payment flow: " + error.message);
+            console.error("Booking error:", error);
+            alert("Could not create booking: " + error.message);
           }
         });
       }
