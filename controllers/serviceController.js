@@ -42,7 +42,7 @@ const serviceController = {
   // Create new service (Admin only)
   createService: async (req, res, next) => {
     try {
-      const { service_name, description, price, duration } = req.body;
+      const { service_name, description, price, duration, image_url } = req.body;
 
       if (!service_name || !price) {
         return res.status(400).json({
@@ -55,7 +55,8 @@ const serviceController = {
         service_name,
         description,
         price,
-        duration
+        duration,
+        image_url
       });
 
       res.status(201).json({

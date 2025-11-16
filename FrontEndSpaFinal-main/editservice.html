@@ -164,7 +164,7 @@
               if (!name) return;
               
               const duration = s.DURATION || s.duration || '60 min';
-              const img = s.IMAGE_URL || s.IMG || 'images/sig.jpg';
+              const img = s.IMAGE_URL || s.image_url || s.IMG || 'images/sig.jpg';
               const serviceId = s.SERVICE_ID || s.service_id || s.id;
               
               const card = createCard({name, duration, img, serviceId});
@@ -324,7 +324,13 @@
             headers: {
               'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ service_name: name, description: desc, price: Number(price), duration })
+            body: JSON.stringify({ 
+              service_name: name, 
+              description: desc, 
+              price: Number(price), 
+              duration,
+              image_url: img
+            })
           });
 
           // Safely handle responses that might not contain JSON (avoid res.json() throwing)

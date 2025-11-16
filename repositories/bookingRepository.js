@@ -3,12 +3,12 @@ const { promisifyQuery } = require('../utils/dbHelpers');
 
 const bookingRepository = {
   // Create new booking
-  create: async ({ user_id, service_id, staff_id, booking_date, booking_time, status_name, payment_status = 'pending' }) => {
+  create: async ({ user_id, service_id, staff_id, booking_date, booking_time, status_name }) => {
     const sql = `
-      INSERT INTO bookings (USER_ID, SERVICE_ID, STAFF_ID, BOOKING_DATE, BOOKING_TIME, STATUS_NAME, PAYMENT_STATUS) 
-      VALUES (?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO bookings (USER_ID, SERVICE_ID, staff_id, BOOKING_DATE, BOOKING_TIME, STATUS_NAME) 
+      VALUES (?, ?, ?, ?, ?, ?)
     `;
-    const result = await promisifyQuery(sql, [user_id, service_id, staff_id, booking_date, booking_time, status_name, payment_status]);
+    const result = await promisifyQuery(sql, [user_id, service_id, staff_id, booking_date, booking_time, status_name]);
     return result.insertId;
   },
 
@@ -20,7 +20,7 @@ const bookingRepository = {
       FROM bookings b
       WHERE b.BOOKING_DATE = ?
       AND b.BOOKING_TIME = ?
-      AND b.STAFF_ID = ?
+      AND b.staff_id = ?
       AND b.STATUS_NAME IN ('pending', 'pending_payment', 'confirmed')
     `;
     const results = await promisifyQuery(sql, [booking_date, booking_time, staff_id]);
@@ -34,7 +34,7 @@ const bookingRepository = {
       FROM bookings b
       WHERE b.BOOKING_DATE = ?
       AND b.STATUS_NAME IN ('pending', 'pending_payment', 'confirmed')
-      ${staff_id ? 'AND b.STAFF_ID = ?' : ''}
+      ${staff_id ? 'AND b.staff_id = ?' : ''}
     `;
     const params = staff_id ? [date, staff_id] : [date];
     const results = await promisifyQuery(sql, params);
@@ -49,9 +49,7 @@ const bookingRepository = {
         b.BOOKING_DATE,
         b.BOOKING_TIME,
         b.STATUS_NAME as booking_status,
-        b.PAYMENT_STATUS,
-        b.RECEIPT_IMAGE,
-        b.STAFF_ID,
+        b.staff_id,
         st.FULL_NAME as staff_name,
         s.SERVICE_NAME,
         s.PRICE as service_price,
@@ -60,12 +58,13 @@ const bookingRepository = {
         t.PRICE as transaction_price,
         t.BOOKING_FEE as booking_fee,
         t.REMAINING_BALANCE as remaining_balance,
-        t.PAYMENT_STATUS as payment_status
-        , t.PAYMENT_METHOD as payment_method
+        t.PAYMENT_STATUS as payment_status,
+        t.RECEIPT_IMAGE as receipt_image,
+        t.PAYMENT_METHOD as payment_method
       FROM bookings b
       LEFT JOIN services s ON b.SERVICE_ID = s.SERVICE_ID
       LEFT JOIN transactions t ON t.BOOKING_ID = b.BOOKING_ID
-      LEFT JOIN staff st ON b.STAFF_ID = st.STAFF_ID
+      LEFT JOIN staff st ON b.staff_id = st.STAFF_ID
 
       WHERE b.USER_ID = ?
       ORDER BY b.BOOKING_DATE DESC, b.BOOKING_TIME DESC
@@ -83,22 +82,22 @@ const bookingRepository = {
         b.BOOKING_DATE,
         b.BOOKING_TIME,
         b.STATUS_NAME as booking_status,
-        b.PAYMENT_STATUS,
-        b.RECEIPT_IMAGE,
         b.USER_ID,
         COALESCE(u.NAME, 'Guest') as client_name,
         u.EMAIL_ADDRESS as client_email,
-        b.STAFF_ID,
+        b.staff_id,
         st.FULL_NAME as staff_name,
         s.SERVICE_NAME,
         s.DESCRIPTION as service_description,
         s.PRICE as service_price,
         s.DURATION as service_duration,
-        t.PAYMENT_METHOD
+        t.PAYMENT_METHOD,
+        t.PAYMENT_STATUS as payment_status,
+        t.RECEIPT_IMAGE as receipt_image
       FROM bookings b
       LEFT JOIN user u ON b.USER_ID = u.USER_ID
       LEFT JOIN services s ON b.SERVICE_ID = s.SERVICE_ID
-      LEFT JOIN staff st ON b.STAFF_ID = st.STAFF_ID
+      LEFT JOIN staff st ON b.staff_id = st.STAFF_ID
       LEFT JOIN transactions t ON t.BOOKING_ID = b.BOOKING_ID
       ORDER BY b.BOOKING_DATE DESC, b.BOOKING_TIME DESC
     `;
@@ -118,7 +117,7 @@ const bookingRepository = {
         b.USER_ID,
         COALESCE(u.NAME, 'Guest') as client_name,
         u.EMAIL_ADDRESS as client_email,
-        b.STAFF_ID,
+        b.staff_id,
         st.FULL_NAME as staff_name,
         s.SERVICE_ID,
         s.SERVICE_NAME,
@@ -128,7 +127,7 @@ const bookingRepository = {
       FROM bookings b
       LEFT JOIN user u ON b.USER_ID = u.USER_ID
       LEFT JOIN services s ON b.SERVICE_ID = s.SERVICE_ID
-      LEFT JOIN staff st ON b.STAFF_ID = st.STAFF_ID
+      LEFT JOIN staff st ON b.staff_id = st.STAFF_ID
       WHERE b.BOOKING_ID = ?
 
     `;
@@ -147,14 +146,14 @@ const bookingRepository = {
         b.USER_ID,
         COALESCE(u.NAME, 'Guest') as client_name,
         u.EMAIL_ADDRESS as client_email,
-        b.STAFF_ID,
+        b.staff_id,
         st.FULL_NAME as staff_name,
         s.SERVICE_NAME,
         s.PRICE as service_price
       FROM bookings b
       LEFT JOIN user u ON b.USER_ID = u.USER_ID
       LEFT JOIN services s ON b.SERVICE_ID = s.SERVICE_ID
-      LEFT JOIN staff st ON b.STAFF_ID = st.STAFF_ID
+      LEFT JOIN staff st ON b.staff_id = st.STAFF_ID
       WHERE b.STATUS_NAME = 'pending'
 
       ORDER BY b.BOOKING_DATE ASC, b.BOOKING_TIME ASC

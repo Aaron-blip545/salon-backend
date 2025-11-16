@@ -76,6 +76,48 @@ class TransactionRepository {
     }
   }
 
+  // Create transaction for an existing booking
+  async createTransaction(data) {
+    const {
+      booking_id,
+      service_id,
+      user_id,
+      amount,
+      price,
+      booking_fee = 0,
+      remaining_balance = 0,
+      payment_method,
+      payment_status
+    } = data;
+
+    const transactionReference = `TXN-${Date.now()}-${booking_id}`;
+
+    const insertTransactionSql = `
+      INSERT INTO transactions (
+        BOOKING_ID, SERVICE_ID, USER_ID, AMOUNT, PRICE, DISCOUNT,
+        PAYMENT_METHOD, PAYMENT_STATUS, TRANSACTION_REFERENCE,
+        booking_fee, remaining_balance, CREATED_AT
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
+    `;
+
+    const result = await promisifyQuery(insertTransactionSql, [
+      booking_id,
+      service_id,
+      user_id,
+      amount,
+      price,
+      0, // discount
+      payment_method,
+      payment_status,
+      transactionReference,
+      booking_fee,
+      remaining_balance
+    ]);
+
+    return result.insertId;
+  }
+
+
   // Get all transactions for a user
   async getUserTransactions(user_id) {
     const sql = `

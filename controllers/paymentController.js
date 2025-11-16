@@ -68,12 +68,32 @@ const paymentController = {
           throw new ApiError(404, 'Booking not found or access denied');
         }
 
-        // Update booking with receipt image path
+        // Update transaction with receipt image path and payment method
         const receiptPath = `/uploads/receipts/${req.file.filename}`;
-        await promisifyQuery(
-          'UPDATE bookings SET receipt_image = ?, payment_status = ? WHERE BOOKING_ID = ?',
-          [receiptPath, 'pending', bookingId]
+        
+        // Check if transaction exists
+        const existingTransaction = await promisifyQuery(
+          'SELECT * FROM transactions WHERE BOOKING_ID = ?',
+          [bookingId]
         );
+
+        if (existingTransaction.length === 0) {
+          // Create transaction if it doesn't exist
+          const bookingDetails = booking[0];
+          await promisifyQuery(
+            `INSERT INTO transactions (BOOKING_ID, SERVICE_ID, USER_ID, AMOUNT, PRICE, DISCOUNT, 
+             PAYMENT_METHOD, PAYMENT_STATUS, RECEIPT_IMAGE, TRANSACTION_REFERENCE, booking_fee, remaining_balance, CREATED_AT) 
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+            [bookingId, bookingDetails.SERVICE_ID, userId, 0, 0, 0, 
+             'GCASH', 'PENDING', receiptPath, `TXN-${Date.now()}-${bookingId}`, 0, 0]
+          );
+        } else {
+          // Update existing transaction
+          await promisifyQuery(
+            'UPDATE transactions SET RECEIPT_IMAGE = ?, PAYMENT_METHOD = ?, PAYMENT_STATUS = ? WHERE BOOKING_ID = ?',
+            [receiptPath, 'GCASH', 'PENDING', bookingId]
+          );
+        }
 
         res.json({
           success: true,
@@ -102,9 +122,9 @@ const paymentController = {
         throw new ApiError(400, 'Invalid status. Must be either "paid" or "failed"');
       }
 
-      // Update booking payment status
+      // Update transaction payment status
       await promisifyQuery(
-        'UPDATE bookings SET payment_status = ? WHERE BOOKING_ID = ?',
+        'UPDATE transactions SET PAYMENT_STATUS = ? WHERE BOOKING_ID = ?',
         [status, bookingId]
       );
 
@@ -140,8 +160,8 @@ const paymentController = {
           b.BOOKING_DATE,
           b.BOOKING_TIME,
           b.STATUS_NAME as booking_status,
-          b.payment_status,
-          b.receipt_image,
+          t.PAYMENT_STATUS as payment_status,
+          t.RECEIPT_IMAGE as receipt_image,
           s.SERVICE_NAME,
           s.PRICE as service_price,
           u.NAME as client_name,
@@ -149,6 +169,7 @@ const paymentController = {
         FROM bookings b
         JOIN services s ON b.SERVICE_ID = s.SERVICE_ID
         JOIN user u ON b.USER_ID = u.USER_ID
+        LEFT JOIN transactions t ON t.BOOKING_ID = b.BOOKING_ID
         WHERE b.BOOKING_ID = ?
       `;
 

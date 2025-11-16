@@ -43,20 +43,21 @@ const bookingController = {
 
       // Create a corresponding transaction record so admin panel can see payment method
       try {
-        await transactionRepository.createBookingWithTransaction({
+        await transactionRepository.createTransaction({
+          booking_id: result.booking_id,
           user_id,
           service_id,
-          booking_date,
-          booking_time,
           amount: servicePrice,
           price: servicePrice,
           booking_fee: 0,
           remaining_balance: 0,
-          payment_method: paymentMethodUsed,
-          payment_status: paymentMethodUsed.toLowerCase() === 'cash' ? 'PENDING' : 'COMPLETED'
+          payment_method: paymentMethodUsed.toUpperCase(),
+          payment_status: paymentMethodUsed.toLowerCase() === 'cash' ? 'PENDING' : 'PENDING'
         });
+        console.log('✅ Transaction created successfully for booking:', result.booking_id);
       } catch (txnError) {
-        console.warn('Could not create transaction record:', txnError.message);
+        console.error('❌ Could not create transaction record:', txnError);
+        console.error('Transaction data:', { booking_id: result.booking_id, user_id, service_id, amount: servicePrice, payment_method: paymentMethodUsed });
         // Don't fail the booking if transaction creation fails, just log it
       }
 

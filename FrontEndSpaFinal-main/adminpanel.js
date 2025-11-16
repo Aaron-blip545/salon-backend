@@ -98,7 +98,7 @@
           <td>${escapeHtml(appt.client)}</td>
           <td>${escapeHtml(appt.service)}</td>
           <td>${escapeHtml(formatDate(appt.date))}</td>
-          <td>${escapeHtml(appt.time)}</td>
+          <td>${escapeHtml(formatTime(appt.time))}</td>
           <td>${escapeHtml(appt.staff || '—')}</td>
           <td><span class="badge ${statusClass}">${statusText}</span></td>
           <td>${escapeHtml(paymentMethodLabel)}</td>
@@ -263,6 +263,24 @@
     }
   }
 
+  function formatTime(timeStr){
+    if(!timeStr) return '';
+    try {
+      // Parse time string (HH:MM:SS or HH:MM)
+      const parts = timeStr.split(':');
+      let hours = parseInt(parts[0], 10);
+      const minutes = parts[1] || '00';
+      
+      // Convert to 12-hour format
+      const period = hours >= 12 ? 'PM' : 'AM';
+      hours = hours % 12 || 12; // Convert 0 to 12 for midnight, 13-23 to 1-11
+      
+      return `${hours}:${minutes} ${period}`;
+    } catch(e) {
+      return timeStr;
+    }
+  }
+
   // Currency formatting for Philippine Peso
   function formatCurrency(amount){
     try{
@@ -416,64 +434,79 @@
   }
 
   // Sidebar navigation handler
-  document.querySelectorAll('.nav-item').forEach(link => {
-    link.addEventListener('click', (e) => {
+  function setupNavigation() {
+    const navItems = document.querySelectorAll('.nav-item');
+    console.log('Setting up navigation, found nav items:', navItems.length);
+    
+    navItems.forEach((link, index) => {
       const href = link.getAttribute('href');
+      console.log(`Nav item ${index}:`, link.textContent.trim(), 'href:', href);
       
-      // Handle section navigation within the page
-      if (href && href.startsWith('#')) {
+      link.addEventListener('click', (e) => {
+        console.log('Nav item clicked:', href);
+        
+        // Only handle hash links (internal navigation), let external links work normally
+        if (!href || !href.startsWith('#')) {
+          console.log('External link, allowing navigation to:', href);
+          return; // Let the browser handle external links
+        }
+        
+        // Prevent default only for hash links
         e.preventDefault();
+        console.log('Internal navigation to section:', href);
         
         // Update active state
         document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
         link.classList.add('active');
         
         const section = href.substring(1); // Remove #
-        
-        // Hide all sections
-        document.querySelector('.content > .grid').style.display = 'grid';
-        const analyticsSection = document.getElementById('analyticsSection');
-        const reportsSection = document.getElementById('reportsSection');
-        if (analyticsSection) analyticsSection.classList.add('hidden');
-        if (reportsSection) reportsSection.classList.add('hidden');
-        
-        // Update page title and content based on section
-        const titleEl = document.querySelector('.main-header h1');
-        const subtitleEl = document.querySelector('.main-header .muted');
-        
-        switch(section) {
-          case 'bookings':
-            if (titleEl) titleEl.textContent = 'Bookings Management';
-            if (subtitleEl) subtitleEl.textContent = 'View and manage all customer bookings';
-            document.querySelector('.content > .grid').style.display = 'grid';
-            break;
-          case 'analytics':
-            if (titleEl) titleEl.textContent = 'Analytics';
-            if (subtitleEl) subtitleEl.textContent = 'Performance metrics and insights';
-            document.querySelector('.content > .grid').style.display = 'none';
-            if (analyticsSection) {
-              analyticsSection.classList.remove('hidden');
-              initAnalytics();
-            }
-            break;
-          case 'reports':
-            if (titleEl) titleEl.textContent = 'Reports';
-            if (subtitleEl) subtitleEl.textContent = 'Generate and download reports';
-            document.querySelector('.content > .grid').style.display = 'none';
-            if (reportsSection) {
-              reportsSection.classList.remove('hidden');
-              initReports();
-            }
-            break;
-          default:
-            if (titleEl) titleEl.textContent = 'Dashboard';
-            if (subtitleEl) subtitleEl.textContent = 'Overview of bookings and performance';
-            document.querySelector('.content > .grid').style.display = 'grid';
-        }
+      
+      // Hide all sections
+      document.querySelector('.content > .grid').style.display = 'grid';
+      const analyticsSection = document.getElementById('analyticsSection');
+      const reportsSection = document.getElementById('reportsSection');
+      if (analyticsSection) analyticsSection.classList.add('hidden');
+      if (reportsSection) reportsSection.classList.add('hidden');
+      
+      // Update page title and content based on section
+      const titleEl = document.querySelector('.main-header h1');
+      const subtitleEl = document.querySelector('.main-header .muted');
+      
+      switch(section) {
+        case 'bookings':
+          if (titleEl) titleEl.textContent = 'Bookings Management';
+          if (subtitleEl) subtitleEl.textContent = 'View and manage all customer bookings';
+          document.querySelector('.content > .grid').style.display = 'grid';
+          break;
+        case 'analytics':
+          if (titleEl) titleEl.textContent = 'Analytics';
+          if (subtitleEl) subtitleEl.textContent = 'Performance metrics and insights';
+          document.querySelector('.content > .grid').style.display = 'none';
+          if (analyticsSection) {
+            analyticsSection.classList.remove('hidden');
+            initAnalytics();
+          }
+          break;
+        case 'reports':
+          if (titleEl) titleEl.textContent = 'Reports';
+          if (subtitleEl) subtitleEl.textContent = 'Generate and download reports';
+          document.querySelector('.content > .grid').style.display = 'none';
+          if (reportsSection) {
+            reportsSection.classList.remove('hidden');
+            initReports();
+          }
+          break;
+        default:
+          if (titleEl) titleEl.textContent = 'Dashboard';
+          if (subtitleEl) subtitleEl.textContent = 'Overview of bookings and performance';
+          document.querySelector('.content > .grid').style.display = 'grid';
       }
-      // External links (like editservice.html) will navigate normally
     });
   });
+  }
+
+  // Call setup navigation
+  setupNavigation();
 
   // Initialize on page load
   renderAppointments();

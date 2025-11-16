@@ -18,8 +18,7 @@ const bookingService = {
       staff_id,
       booking_date,
       booking_time,
-      status_name,
-      payment_status: 'pending'
+      status_name
     });
 
     // Fetch full booking details to return to client

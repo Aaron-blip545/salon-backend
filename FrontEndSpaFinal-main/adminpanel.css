@@ -59,7 +59,8 @@ body{
 
 .nav{display:flex;flex-direction:column;gap:8px;margin-top:6px}
 .nav-item{
-  display:block;padding:10px 12px;border-radius:10px;color:var(--text);text-decoration:none;font-weight:600;transition:all .15s ease;opacity:0.95
+  display:block;padding:10px 12px;border-radius:10px;color:var(--text);text-decoration:none;font-weight:600;transition:all .15s ease;opacity:0.95;
+  cursor:pointer;position:relative;z-index:1;pointer-events:auto
 }
 .nav-item:hover{background:rgba(59,130,246,0.06);transform:translateX(4px)}
 .nav-item.active{background:linear-gradient(90deg,var(--primary),var(--accent));color:white;box-shadow:0 8px 20px rgba(59,130,246,0.12)}
