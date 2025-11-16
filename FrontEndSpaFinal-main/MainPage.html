@@ -105,29 +105,40 @@
         </div>
         <div class="contact-item">(02) 8656 5790</div>
       </div>
-
-      <!-- Right Side Form -->
-      <div class="contact-form" id="contact-us">
-        <form>
-          <label for="fname">First Name</label>
-          <input type="text" id="fname" placeholder="First Name" />
-
-          <label for="lname">Last Name</label>
-          <input type="text" id="lname" placeholder="Last Name" />
-
-          <label for="mobile">Mobile Number</label>
-          <input type="tel" id="mobile" placeholder="+63 Mobile Number" />
-
-          <label for="email">Email</label>
-          <input type="email" id="email" placeholder="Email" />
-
-          <label for="message">Message</label>
-          <textarea id="message" placeholder="Type Here"></textarea>
-
-          <button type="submit">Submit</button>
-        </form>
-      </div>
     </div>
+
+    <!-- Reviews Section -->
+    <section id="reviews" style="padding:40px 5%; background:#f9fafb;">
+      <h2 style="margin-bottom:16px;">What our clients say</h2>
+      <div id="reviewsList" style="display:grid; gap:16px; margin-bottom:24px;"></div>
+
+      <div id="reviewFormWrapper" style="max-width:480px; background:#ffffff; padding:16px 20px; border-radius:12px; box-shadow:0 4px 10px rgba(0,0,0,0.03);">
+        <h3 style="margin-top:0; margin-bottom:12px;">Leave a review</h3>
+        <form id="reviewForm">
+          <div style="margin-bottom:8px;">
+            <label for="reviewName">Name</label>
+            <input type="text" id="reviewName" placeholder="Your name" style="width:100%; padding:8px 10px; border-radius:8px; border:1px solid #ddd;" />
+          </div>
+          <div style="margin-bottom:8px;">
+            <label for="reviewRating">Rating</label>
+            <select id="reviewRating" style="width:100%; padding:8px 10px; border-radius:8px; border:1px solid #ddd;">
+              <option value="5">5 - Excellent</option>
+              <option value="4">4 - Very Good</option>
+              <option value="3">3 - Good</option>
+              <option value="2">2 - Fair</option>
+              <option value="1">1 - Poor</option>
+            </select>
+          </div>
+          <div style="margin-bottom:12px;">
+            <label for="reviewComment">Comment</label>
+            <textarea id="reviewComment" placeholder="Share your experience" style="width:100%; padding:8px 10px; border-radius:8px; border:1px solid #ddd;"></textarea>
+          </div>
+          <button type="submit" style="padding:8px 16px; border-radius:999px; border:none; background:#2563eb; color:#fff; cursor:pointer;">Submit review</button>
+        </form>
+        <p id="reviewFormNote" style="font-size:12px; color:#6b7280; margin-top:8px;"></p>
+      </div>
+    </section>
+
     <div class="loader"></div>
 
     <script src="load.js" defer></script>
@@ -214,6 +225,111 @@
             localStorage.removeItem('servicesUpdated'); // Clear the flag
           }
         }, 1000);
+      
+        // ===== Reviews =====
+        const API_BASE = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') ? 'http://localhost:3000' : '';
+
+        function escapeHtml(str){
+          return String(str || '').replace(/[&<>\"]/g, function(tag){
+            const chars = {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'};
+            return chars[tag] || tag;
+          });
+        }
+
+        function renderReviews(items){
+          const list = document.getElementById('reviewsList');
+          if(!list) return;
+          list.innerHTML = '';
+
+          if(!items || !items.length){
+            list.innerHTML = '<p style="color:#6b7280;">No reviews yet. Be the first to share your experience!</p>';
+            return;
+          }
+
+          items.forEach(r => {
+            const card = document.createElement('div');
+            card.className = 'review-card';
+            const stars = '★★★★★'.slice(0, Number(r.RATING || r.rating || 0));
+            const name = r.NAME || r.name || 'Guest';
+            const comment = r.COMMENT || r.comment || '';
+            const dateStr = r.CREATED_AT ? new Date(r.CREATED_AT).toLocaleDateString('en-US', {month:'short', day:'numeric', year:'numeric'}) : '';
+            card.innerHTML = `
+              <div class="review-card-header">
+                <span class="review-card-name">${escapeHtml(name)}</span>
+                <span class="review-card-stars">${escapeHtml(stars)}</span>
+              </div>
+              <p class="review-card-comment">${escapeHtml(comment)}</p>
+              <span class="review-card-date">${escapeHtml(dateStr)}</span>
+            `;
+            list.appendChild(card);
+          });
+        }
+
+        async function loadReviews(){
+          try{
+            const res = await fetch(API_BASE + '/api/reviews');
+            if(!res.ok) return;
+            const data = await res.json();
+            const items = Array.isArray(data) ? data : (data && data.data ? data.data : []);
+            renderReviews(items);
+          }catch(err){
+            console.warn('Could not load reviews:', err.message);
+          }
+        }
+
+        function initReviewForm(){
+          const form = document.getElementById('reviewForm');
+          const noteEl = document.getElementById('reviewFormNote');
+          if(!form) return;
+
+          const token = localStorage.getItem('token') || localStorage.getItem('authToken') || localStorage.getItem('jwt');
+          if(!token && noteEl){
+            noteEl.textContent = 'Log in to submit a review.';
+          }
+
+          form.addEventListener('submit', async function(e){
+            e.preventDefault();
+            const name = document.getElementById('reviewName').value.trim();
+            const rating = document.getElementById('reviewRating').value;
+            const comment = document.getElementById('reviewComment').value.trim();
+
+            if(!name || !comment){
+              if(noteEl) noteEl.textContent = 'Please provide your name and comment.';
+              return;
+            }
+
+            if(!token){
+              if(noteEl) noteEl.textContent = 'You need to log in before submitting a review.';
+              return;
+            }
+
+            try{
+              const res = await fetch(API_BASE + '/api/reviews', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': 'Bearer ' + token
+                },
+                body: JSON.stringify({ name, rating, comment })
+              });
+
+              const data = await res.json().catch(()=>({}));
+              if(!res.ok){
+                if(noteEl) noteEl.textContent = data.message || 'Failed to submit review.';
+                return;
+              }
+
+              form.reset();
+              if(noteEl) noteEl.textContent = 'Thank you for your review!';
+              loadReviews();
+            }catch(err){
+              if(noteEl) noteEl.textContent = 'An error occurred while submitting your review.';
+            }
+          });
+        }
+
+        loadReviews();
+        initReviewForm();
 
       })();
     </script>

@@ -11,6 +11,7 @@ const serviceRoutes = require('./routes/serviceRoute');
 const transactionRoutes = require('./routes/transactionRoute');
 const paymentRoutes = require('./routes/paymentRoute');
 const staffRoutes = require('./routes/staffRoute');
+const reviewRoutes = require('./routes/reviewRoute');
 
 // Import middleware
 const errorHandler = require('./middleware/errorHandler');
@@ -41,6 +42,7 @@ app.use('/api/services', serviceRoutes);
 app.use('/api/transactions', transactionRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/staff', staffRoutes);
+app.use('/api/reviews', reviewRoutes);
 
 // Health check
 app.get('/health', (req, res) => {

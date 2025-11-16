@@ -69,9 +69,6 @@
         const statusClass = (appt.status || 'pending').toLowerCase();
         const statusText = capitalizeFirst(appt.status || 'pending');
 
-        const paymentStatusClass = (appt.paymentStatus || 'pending').toLowerCase();
-        const paymentStatusText = capitalizeFirst(appt.paymentStatus || 'pending');
-
         const paymentMethodLabel = appt.paymentMethod
           ? (String(appt.paymentMethod).toUpperCase() === 'GCASH'
               ? 'GCash'
@@ -88,11 +85,11 @@
           <td>${escapeHtml(appt.service)}</td>
           <td>${escapeHtml(formatDate(appt.date))}</td>
           <td>${escapeHtml(appt.time)}</td>
+          <td>${escapeHtml(appt.staff || '—')}</td>
           <td><span class="badge ${statusClass}">${statusText}</span></td>
-          <td><span class="badge payment-${paymentStatusClass}">${paymentStatusText}</span></td>
           <td>${escapeHtml(paymentMethodLabel)}</td>
           <td>
-            ${appt.receiptImage
+            ${appt.paymentMethod && String(appt.paymentMethod).toLowerCase() !== 'cash' && appt.receiptImage
               ? `<a href="${appt.receiptImage}" target="_blank">
                    <img src="${appt.receiptImage}"
                         alt="Receipt"
@@ -117,6 +114,13 @@
 
     // summary (always update)
     updateSummaryStats();
+  }
+
+  function normalizeStatus(raw){
+    const val = String(raw || '').toLowerCase();
+    if(val === 'pending_payment' || val === 'pending-payment') return 'pending';
+    if(val === 'cancelled') return 'canceled';
+    return val;
   }
 
   function updateSummaryStats(){
@@ -314,8 +318,12 @@
           service: b.SERVICE_NAME || b.service || 'Service',
           date: b.BOOKING_DATE || b.booking_date || b.date || '',
           time: b.BOOKING_TIME || b.booking_time || b.time || '',
-          status: (b.booking_status || b.STATUS || b.status || b.status_name || 'pending').toLowerCase(),
-          price: parseFloat(b.service_price || b.PRICE || b.price || 0)
+          staff: b.staff_name || b.STAFF_NAME || '',
+          status: normalizeStatus(b.booking_status || b.STATUS || b.status || b.status_name || 'pending'),
+          price: parseFloat(b.service_price || b.PRICE || b.price || 0),
+          paymentStatus: (b.PAYMENT_STATUS || b.payment_status || 'pending').toLowerCase(),
+          paymentMethod: b.PAYMENT_METHOD || b.payment_method || null,
+          receiptImage: b.RECEIPT_IMAGE || b.receipt_image || null
         }));
         
         renderAppointments();
