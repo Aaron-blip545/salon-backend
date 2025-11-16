@@ -74,6 +74,20 @@
               ? 'GCash'
               : capitalizeFirst(String(appt.paymentMethod).toLowerCase()))
           : '—';
+
+        const paymentMethodRaw = (appt.paymentMethod || '').toString().toLowerCase();
+        let paymentProofHtml = '<span class="muted" style="font-size:12px;">No proof</span>';
+
+        if (paymentMethodRaw === 'cash') {
+          paymentProofHtml = '<span class="muted" style="font-size:12px;">Not required</span>';
+        } else if (appt.paymentMethod && paymentMethodRaw !== 'cash' && appt.receiptImage) {
+          paymentProofHtml = `
+            <a href="${appt.receiptImage}" target="_blank">
+              <img src="${appt.receiptImage}"
+                   alt="Receipt"
+                   style="width:48px;height:48px;object-fit:cover;border-radius:4px;border:1px solid #e5e7eb;" />
+            </a>`;
+        }
         
         // Determine if actions should be shown
         const isConfirmed = appt.status === 'confirmed';
@@ -88,15 +102,7 @@
           <td>${escapeHtml(appt.staff || '—')}</td>
           <td><span class="badge ${statusClass}">${statusText}</span></td>
           <td>${escapeHtml(paymentMethodLabel)}</td>
-          <td>
-            ${appt.paymentMethod && String(appt.paymentMethod).toLowerCase() !== 'cash' && appt.receiptImage
-              ? `<a href="${appt.receiptImage}" target="_blank">
-                   <img src="${appt.receiptImage}"
-                        alt="Receipt"
-                        style="width:48px;height:48px;object-fit:cover;border-radius:4px;border:1px solid #e5e7eb;" />
-                 </a>`
-              : '<span class="muted" style="font-size:12px;">No proof</span>'}
-          </td>
+          <td>${paymentProofHtml}</td>
           <td>
             ${showActions ? `
               <button class="action-btn confirm" data-id="${appt.id}">Confirm</button>

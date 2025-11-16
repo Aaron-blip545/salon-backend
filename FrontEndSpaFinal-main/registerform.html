@@ -12,8 +12,8 @@
         <header>Register</header>
         <form action="" method="post">
           <div class="field input">
-            <label for="username">Username</label>
-            <input type="text" name="username" id="username" required />
+            <label for="fullName">Full Name</label>
+            <input type="text" name="fullName" id="fullName" required />
           </div>
 
           <div class="field input">
@@ -49,6 +49,16 @@
             />
           </div>
 
+          <div class="field input">
+            <label for="gender">Gender</label>
+            <select name="gender" id="gender" required>
+              <option value="" disabled selected>Select gender</option>
+              <option value="male">Male</option>
+              <option value="female">Female</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+
           <div class="field">
             <input
               type="submit"
@@ -72,10 +82,11 @@
               {
                 method: "POST",
                 body: JSON.stringify({
-                  name: formData.get("username"),
+                  name: formData.get("fullName"),
                   email_address: formData.get("email"),
                   phone: formData.get("phonenumber"),
                   password: formData.get("password"),
+                  gender: formData.get("gender"),
                 }),
                 headers: {
                   "Content-Type": "application/json",

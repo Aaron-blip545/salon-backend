@@ -1,5 +1,7 @@
 const { isTimeSlotAvailable } = require('../repositories/bookingRepository');
 const bookingService = require('../services/bookingService');
+const transactionRepository = require('../repositories/transactionRepository');
+const serviceRepository = require('../repositories/serviceRepository');
 const ApiError = require('../utils/ApiError');
 const path = require('path');
 
@@ -7,7 +9,7 @@ const bookingController = {
   // Create new booking
   createBooking: async (req, res, next) => {
     try {
-      const { service_id, booking_date, booking_time, staff_id } = req.body;
+      const { service_id, booking_date, booking_time, staff_id, payment_method } = req.body;
       const user_id = req.user.id;
 
       // Validate required fields
@@ -29,6 +31,34 @@ const bookingController = {
         booking_time,
         status_name: 'pending_payment' // New status to indicate payment is pending
       });
+
+      // Get service details to calculate transaction amounts
+      const service = await serviceRepository.findById(service_id);
+      if (!service) {
+        throw new ApiError(404, 'Service not found');
+      }
+
+      const servicePrice = parseFloat(service.PRICE || service.price || 0);
+      const paymentMethodUsed = payment_method || 'cash';
+
+      // Create a corresponding transaction record so admin panel can see payment method
+      try {
+        await transactionRepository.createBookingWithTransaction({
+          user_id,
+          service_id,
+          booking_date,
+          booking_time,
+          amount: servicePrice,
+          price: servicePrice,
+          booking_fee: 0,
+          remaining_balance: 0,
+          payment_method: paymentMethodUsed,
+          payment_status: paymentMethodUsed.toLowerCase() === 'cash' ? 'PENDING' : 'COMPLETED'
+        });
+      } catch (txnError) {
+        console.warn('Could not create transaction record:', txnError.message);
+        // Don't fail the booking if transaction creation fails, just log it
+      }
 
       // Return payment URL in the response
       res.status(201).json({
