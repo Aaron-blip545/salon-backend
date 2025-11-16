@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Profile</title>
     <link rel="stylesheet" href="accountsettings.css" />
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   </head>
   <body>
     <div class="container">
@@ -51,13 +52,19 @@
         <div class="account-edit">
           <div class="input-container">
             <label>Email</label>
-            <input id="email" type="email" placeholder="Email" />
+            <input id="email" type="email" placeholder="Email" readonly style="background-color: #f5f5f5; cursor: not-allowed;" />
           </div>
         </div>
         <div class="account-edit">
           <div class="input-container">
             <label>Phone No.</label>
             <input id="phone" type="text" placeholder="Phone Number" />
+          </div>
+        </div>
+        <div class="account-edit">
+          <div class="input-container">
+            <label>Gender</label>
+            <input id="gender" type="text" value="" readonly style="background-color: #f5f5f5; cursor: not-allowed;" />
           </div>
         </div>
       </form>

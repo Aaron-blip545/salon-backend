@@ -6,16 +6,17 @@ const authController = {
   // Register new user
   register: async (req, res, next) => {
     try {
-      const { name, email_address, phone, password } = req.body;
+      const { name, email_address, phone, password, gender } = req.body;
+      console.log('Controller received gender:', gender); // DEBUG
 
       // Validate input
-      const errors = validationResult({ name, email_address, phone, password });
+      const errors = validationResult({ name, email_address, phone, password, gender });
       if (errors.length > 0) {
         throw new ApiError(400, 'Validation failed', errors);
       }
 
       // Create user
-      const result = await userService.createUser({ name, email_address, phone, password });
+      const result = await userService.createUser({ name, email_address, phone, password, gender });
 
       res.status(201).json({
         success: true,
@@ -59,7 +60,9 @@ const authController = {
       const userId = req.user && (req.user.id || req.user.user_id);
       if (!userId) throw new ApiError(401, 'User not authenticated');
 
+      console.log('Getting user by ID:', userId); // DEBUG
       const user = await userService.getUserById(userId);
+      console.log('User returned from service:', user); // DEBUG
       res.json({ success: true, data: user });
     } catch (error) {
       next(error);
@@ -73,7 +76,7 @@ const authController = {
       if (!userId) throw new ApiError(401, 'User not authenticated');
 
       const { name, email_address, phone } = req.body;
-      const updated = await userService.updateUser(userId, { name, email_address, phone });
+      const updated = await userService.updateUser(userId, { name, email_address, phone, gender});
       res.json({ success: true, message: 'Profile updated', data: updated });
     } catch (error) {
       next(error);

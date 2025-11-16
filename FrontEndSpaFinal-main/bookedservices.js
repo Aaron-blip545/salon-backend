@@ -42,7 +42,12 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Show one-time success message if present
   const success = sessionStorage.getItem('bookingSuccess');
   if (success) {
-    alert(success);
+    Swal.fire({
+      icon: 'success',
+      title: 'Success!',
+      text: success,
+      confirmButtonColor: '#3085d6'
+    });
     sessionStorage.removeItem('bookingSuccess');
   }
 
@@ -95,29 +100,75 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       const action = document.createElement('td');
 
-      // Only allow cancellation when payment method is CASH (or no payment method recorded)
-      const paymentMethod = (b.payment_method || b.PAYMENT_METHOD || '').toUpperCase();
-      const canCancel = paymentMethod === '' || paymentMethod === 'CASH';
+      // Get booking status
+      const bookingStatus = (b.booking_status || b.STATUS_NAME || b.status_name || '').toUpperCase();
+      
+      // Allow cancellation for all bookings except already CANCELLED or COMPLETED
+      const canCancel = bookingStatus !== 'CANCELLED' && bookingStatus !== 'COMPLETED';
 
       if (canCancel) {
         const cancelBtn = document.createElement('button');
         cancelBtn.className = 'cancel-btn';
         cancelBtn.textContent = 'Cancel';
         cancelBtn.addEventListener('click', async () => {
-          if (!confirm('Cancel this booking?')) return;
+          const result = await Swal.fire({
+            title: 'Cancel Booking?',
+            text: 'Are you sure you want to cancel this booking?',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: 'Yes, cancel it!',
+            cancelButtonText: 'No, keep it'
+          });
+          
+          if (!result.isConfirmed) return;
+          
           try {
             const id = b.BOOKING_ID || b.booking_id;
+            
+            // Disable button and show loading state
+            cancelBtn.disabled = true;
+            cancelBtn.textContent = 'Cancelling...';
+            
             const del = await fetch(`${API_BASE}/bookings/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
             const resjson = await del.json();
             if (resjson && resjson.success) {
-              alert('Booking cancelled');
-              tr.remove();
+              // Update the status cell
+              status.textContent = 'CANCELLED';
+              
+              // Remove the cancel button and replace with dash
+              action.innerHTML = '';
+              action.textContent = '-';
+              
+              Swal.fire({
+                icon: 'success',
+                title: 'Cancelled!',
+                text: 'Booking cancelled successfully!',
+                confirmButtonColor: '#3085d6'
+              });
             } else {
-              alert('Failed to cancel booking: ' + (resjson.message || 'Unknown'));
+              Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: 'Failed to cancel booking: ' + (resjson.message || 'Unknown error'),
+                confirmButtonColor: '#d33'
+              });
+              // Re-enable button if failed
+              cancelBtn.disabled = false;
+              cancelBtn.textContent = 'Cancel';
             }
           } catch (err) {
             console.error(err);
-            alert('Network error');
+            Swal.fire({
+              icon: 'error',
+              title: 'Network Error',
+              text: 'Network error. Please try again.',
+              confirmButtonColor: '#d33'
+            });
+            // Re-enable button if error
+            cancelBtn.disabled = false;
+            cancelBtn.textContent = 'Cancel';
           }
         });
 

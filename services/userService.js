@@ -5,7 +5,8 @@ const ApiError = require('../utils/ApiError');
 
 const userService = {
   // Create new user
-  createUser: async ({ name, email_address, phone, password }) => {
+  createUser: async ({ name, email_address, phone, password, gender  }) => {
+    console.log('Service received gender:', gender); // DEBUG
     // Check if email already exists
     const existingUser = await userRepository.findByEmail(email_address);
     if (existingUser) {
@@ -24,7 +25,8 @@ const userService = {
       email_address,
       phone: trimmedPhone,
       password_hash: hashedPassword,
-      role: 'customer'
+      role: 'customer',
+      gender
     });
 
     return { user_id: userId };
@@ -58,7 +60,8 @@ const userService = {
         name: user.NAME,
         email: user.EMAIL_ADDRESS,
         phone: user.PHONE,
-        role: user.ROLE
+        role: user.ROLE,
+        gender: user.GENDER
       }
     };
   }
@@ -73,12 +76,13 @@ const userService = {
       name: user.NAME,
       email: user.EMAIL_ADDRESS,
       phone: user.PHONE,
-      role: user.ROLE
+      role: user.ROLE,
+      gender: user.GENDER
     };
   },
 
   // Update user profile
-  updateUser: async (user_id, { name, email_address, phone }) => {
+  updateUser: async (user_id, { name, email_address, phone, gender }) => {
     // Basic validation
     if (!name || !email_address) {
       throw new ApiError(400, 'Name and email are required');
@@ -93,7 +97,7 @@ const userService = {
     // Trim and limit phone to 15 characters
     const trimmedPhone = (phone || '').trim().substring(0, 15);
 
-    const updated = await userRepository.updateById(user_id, { name, email_address, phone: trimmedPhone });
+    const updated = await userRepository.updateById(user_id, { name, email_address, phone: trimmedPhone, gender });
     if (!updated) throw new ApiError(500, 'Failed to update user');
 
     return await userService.getUserById(user_id);

@@ -37,8 +37,8 @@ class TransactionRepository {
         INSERT INTO transactions (
           BOOKING_ID, SERVICE_ID, USER_ID, AMOUNT, PRICE, DISCOUNT,
           PAYMENT_METHOD, PAYMENT_STATUS, TRANSACTION_REFERENCE,
-          BOOKING_FEE, REMAINING_BALANCE, PAYMONGO_SOURCE_ID, PAYMONGO_PAYMENT_ID, CREATED_AT
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
+          BOOKING_FEE, REMAINING_BALANCE, CREATED_AT
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
       `;
 
       console.log('Inserting transaction with:', { bookingId, service_id, user_id, amount, payment_method, payment_status });
@@ -53,9 +53,7 @@ class TransactionRepository {
         payment_status,
         transactionReference,
         booking_fee,
-        remaining_balance,
-        null,
-        null
+        remaining_balance
       ]);
 
       await promisifyQuery('COMMIT');
@@ -132,8 +130,6 @@ class TransactionRepository {
         t.PAYMENT_METHOD as payment_method,
         t.PAYMENT_STATUS as payment_status,
         t.TRANSACTION_REFERENCE as transaction_reference,
-        t.PAYMONGO_SOURCE_ID as paymongo_source_id,
-        t.PAYMONGO_PAYMENT_ID as paymongo_payment_id,
         t.CREATED_AT as created_at,
         b.BOOKING_DATE as booking_date,
         b.BOOKING_TIME as booking_time,
@@ -182,15 +178,7 @@ class TransactionRepository {
     await promisifyQuery('UPDATE transactions SET PAYMENT_STATUS = ? WHERE BOOKING_ID = ?', [status, booking_id]);
   }
 
-  // Update PayMongo source ID
-  async updatePayMongoSourceId(booking_id, source_id) {
-    await promisifyQuery('UPDATE transactions SET PAYMONGO_SOURCE_ID = ? WHERE BOOKING_ID = ?', [source_id, booking_id]);
-  }
 
-  // Update PayMongo payment ID
-  async updatePayMongoPaymentId(booking_id, payment_id) {
-    await promisifyQuery('UPDATE transactions SET PAYMONGO_PAYMENT_ID = ? WHERE BOOKING_ID = ?', [payment_id, booking_id]);
-  }
 
   // Update transaction status by transaction ID
   async updateTransactionStatus(transaction_id, status) {
@@ -205,11 +193,7 @@ class TransactionRepository {
     return rows[0] || null;
   }
 
-  // Get transaction by PayMongo source ID
-  async getTransactionBySourceId(source_id) {
-    const rows = await promisifyQuery('SELECT * FROM transactions WHERE PAYMONGO_SOURCE_ID = ?', [source_id]);
-    return rows[0] || null;
-  }
+
 
   // Update remaining balance
   async updateRemainingBalance(booking_id, new_balance) {

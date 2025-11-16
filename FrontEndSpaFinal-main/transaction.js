@@ -9,8 +9,14 @@ function loadBookingDetails() {
     bookingDetails = JSON.parse(sessionStorage.getItem('bookingDetails'));
     
     if (!bookingDetails) {
-        alert('No booking details found. Please start from booking form.');
-        window.location.href = 'booking-form.html';
+        Swal.fire({
+            icon: 'error',
+            title: 'No Booking Found',
+            text: 'No booking details found. Please start from booking form.',
+            confirmButtonColor: '#d33'
+        }).then(() => {
+            window.location.href = 'booking-form.html';
+        });
         return;
     }
     
@@ -160,11 +166,21 @@ async function processCashPayment() {
             sessionStorage.setItem('bookingSuccess', 'Booking confirmed! Please pay cash on service day. Pending admin approval.');
             window.location.href = 'bookedservices.html';
         } else {
-            alert('Failed to create booking: ' + data.message);
+            Swal.fire({
+                icon: 'error',
+                title: 'Booking Failed',
+                text: 'Failed to create booking: ' + data.message,
+                confirmButtonColor: '#d33'
+            });
         }
     } catch (error) {
         console.error('Error:', error);
-        alert('Transaction failed. Please try again.');
+        Swal.fire({
+            icon: 'error',
+            title: 'Transaction Failed',
+            text: 'Transaction failed. Please try again.',
+            confirmButtonColor: '#d33'
+        });
     } finally {
         loadingEl.classList.remove('active');
         submitBtn.disabled = false;
@@ -178,14 +194,24 @@ async function processGCashPayment() {
     const fileInput = document.getElementById('receipt-file');
 
     if (!fileInput || !fileInput.files.length) {
-        alert('Please upload a screenshot/photo of your GCash receipt first.');
+        Swal.fire({
+            icon: 'warning',
+            title: 'Receipt Required',
+            text: 'Please upload a screenshot/photo of your GCash receipt first.',
+            confirmButtonColor: '#3085d6'
+        });
         return;
     }
 
     const file = fileInput.files[0];
 
     if (!bookingDetails || !bookingDetails.booking_id) {
-        alert('Missing booking information. Please re-book the service.');
+        Swal.fire({
+            icon: 'error',
+            title: 'Missing Information',
+            text: 'Missing booking information. Please re-book the service.',
+            confirmButtonColor: '#d33'
+        });
         return;
     }
 
@@ -218,7 +244,12 @@ async function processGCashPayment() {
         window.location.href = 'bookedservices.html';
     } catch (error) {
         console.error('Error:', error);
-        alert(error.message || 'Payment failed. Please try again.');
+        Swal.fire({
+            icon: 'error',
+            title: 'Payment Failed',
+            text: error.message || 'Payment failed. Please try again.',
+            confirmButtonColor: '#d33'
+        });
     } finally {
         loadingEl.classList.remove('active');
         submitBtn.disabled = false;
