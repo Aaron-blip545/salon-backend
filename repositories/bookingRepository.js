@@ -172,6 +172,32 @@ const bookingRepository = {
   deleteById: async (booking_id) => {
     const sql = 'DELETE FROM bookings WHERE BOOKING_ID = ?';
     await promisifyQuery(sql, [booking_id]);
+  },
+
+  // Get bookings by staff ID with client details
+  findByStaffId: async (staff_id) => {
+    const sql = `
+      SELECT
+        b.BOOKING_ID,
+        b.BOOKING_DATE,
+        b.BOOKING_TIME,
+        b.STATUS_NAME as booking_status,
+        b.USER_ID,
+        COALESCE(u.NAME, 'Guest') as client_name,
+        u.email_address as client_email,
+        u.PHONE as client_phone,
+        s.SERVICE_NAME,
+        s.PRICE as service_price,
+        t.PAYMENT_STATUS as payment_status
+      FROM bookings b
+      LEFT JOIN user u ON b.USER_ID = u.USER_ID
+      LEFT JOIN services s ON b.SERVICE_ID = s.SERVICE_ID
+      LEFT JOIN transactions t ON t.BOOKING_ID = b.BOOKING_ID
+      WHERE b.staff_id = ?
+      ORDER BY b.BOOKING_DATE DESC, b.BOOKING_TIME DESC
+    `;
+    const results = await promisifyQuery(sql, [staff_id]);
+    return results;
   }
 };
 

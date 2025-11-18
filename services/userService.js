@@ -101,6 +101,19 @@ const userService = {
     if (!updated) throw new ApiError(500, 'Failed to update user');
 
     return await userService.getUserById(user_id);
+  },
+
+  // Get all users (admin only)
+  getAllUsers: async () => {
+    try {
+      console.log('[getAllUsers] Service called');
+      const users = await userRepository.findAll();
+      console.log('[getAllUsers] Repository returned:', users ? users.length : 0, 'users');
+      return users || [];
+    } catch (error) {
+      console.error('[getAllUsers] Service error:', error);
+      throw error;
+    }
   }
 };
 

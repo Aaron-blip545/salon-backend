@@ -156,7 +156,7 @@
 
       async function loadStaff() {
         try {
-          const res = await fetch(`${API_BASE}/staff`);
+          const res = await fetch(`${API_BASE}/staff/active`);
           const data = await res.json();
           const staffListEl = document.getElementById("staffList");
 

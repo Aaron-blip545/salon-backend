@@ -81,6 +81,19 @@ const authController = {
     } catch (error) {
       next(error);
     }
+  },
+
+  // Get all users (admin only)
+  getAllUsers: async (req, res, next) => {
+    try {
+      console.log('[getAllUsers] Controller called');
+      const users = await userService.getAllUsers();
+      console.log('[getAllUsers] Users fetched:', users ? users.length : 0);
+      res.json({ success: true, data: users });
+    } catch (error) {
+      console.error('[getAllUsers] Controller error:', error);
+      next(error);
+    }
   }
 };
 

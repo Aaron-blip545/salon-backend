@@ -50,6 +50,44 @@
     }
   }
 
+  // Load Dashboard Section - shows summary cards + recent 10 bookings (read-only)
+  function loadDashboardSection() {
+    updateSummaryCards();
+    
+    const tableBody = document.querySelector('#dashboardAppointmentsTable tbody');
+    if (!tableBody) return;
+    
+    // Show only recent 10 bookings
+    const recentBookings = appointments.slice(0, 10);
+    
+    if (recentBookings.length === 0) {
+      tableBody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:2rem;color:#6b7280;">No recent bookings</td></tr>';
+      return;
+    }
+    
+    tableBody.innerHTML = recentBookings.map(appt => {
+      const statusClass = (appt.status || 'pending').toLowerCase();
+      const statusText = capitalizeFirst(appt.status || 'pending');
+      const paymentMethodLabel = appt.paymentMethod
+        ? (String(appt.paymentMethod).toUpperCase() === 'GCASH'
+            ? 'GCash'
+            : capitalizeFirst(String(appt.paymentMethod).toLowerCase()))
+        : '—';
+      
+      return `
+        <tr>
+          <td>${escapeHtml(appt.client)}</td>
+          <td>${escapeHtml(appt.service)}</td>
+          <td>${escapeHtml(formatDate(appt.date))}</td>
+          <td>${escapeHtml(formatTime(appt.time))}</td>
+          <td>${escapeHtml(appt.staff)}</td>
+          <td><span class="badge badge-${statusClass}">${statusText}</span></td>
+          <td><span class="badge badge-${paymentMethodLabel.toLowerCase().replace(' ', '-')}">${paymentMethodLabel}</span></td>
+        </tr>
+      `;
+    }).join('');
+  }
+
   function renderAppointments(){
     appointmentsTableBody.innerHTML = '';
 
@@ -352,6 +390,8 @@
         
         renderAppointments();
         updateChart();
+        updateSummaryCards();
+        loadDashboardSection(); // Load dashboard recent bookings
       }
     } catch(err) {
       console.warn('Could not fetch bookings from API:', err.message);
@@ -405,22 +445,13 @@
 
   // Bind empty-state buttons
   const refreshBtn = document.getElementById('refreshBtn');
-  const loadSampleBtn = document.getElementById('loadSampleBtn');
   
-  refreshBtn.addEventListener('click', ()=>{ 
-    fetchBookings(); 
-    fetchAnalytics();
-  });
-  
-  loadSampleBtn.addEventListener('click', ()=>{ 
-    // Sample data for testing
-    appointments = [
-      {id:1,client:'John Doe',service:'Haircut',date:'2025-11-20',time:'10:00 AM',status:'pending',price:500},
-      {id:2,client:'Jane Smith',service:'Manicure',date:'2025-11-21',time:'2:00 PM',status:'confirmed',price:300}
-    ];
-    renderAppointments(); 
-    updateChart(); 
-  });
+  if (refreshBtn) {
+    refreshBtn.addEventListener('click', ()=>{ 
+      fetchBookings(); 
+      fetchAnalytics();
+    });
+  }
 
   // Logout handler
   const logoutBtn = document.getElementById('logoutBtn');
@@ -440,7 +471,8 @@
     
     navItems.forEach((link, index) => {
       const href = link.getAttribute('href');
-      console.log(`Nav item ${index}:`, link.textContent.trim(), 'href:', href);
+      const dataSection = link.getAttribute('data-section');
+      console.log(`Nav item ${index}:`, link.textContent.trim(), 'href:', href, 'data-section:', dataSection);
       
       link.addEventListener('click', (e) => {
         console.log('Nav item clicked:', href);
@@ -461,27 +493,68 @@
         
         const section = href.substring(1); // Remove #
       
-      // Hide all sections
-      document.querySelector('.content > .grid').style.display = 'grid';
+      // Hide/show sections
+      const dashboardSection = document.getElementById('dashboardSection');
+      const bookingsSection = document.getElementById('bookingsSection');
+      const servicesSection = document.getElementById('servicesSection');
+      const clientsSection = document.getElementById('clientsSection');
+      const staffSection = document.getElementById('staffSection');
       const analyticsSection = document.getElementById('analyticsSection');
       const reportsSection = document.getElementById('reportsSection');
-      if (analyticsSection) analyticsSection.classList.add('hidden');
-      if (reportsSection) reportsSection.classList.add('hidden');
+      
+      // Hide all sections first
+      [dashboardSection, bookingsSection, servicesSection, clientsSection, staffSection, analyticsSection, reportsSection].forEach(s => {
+        if (s) s.classList.add('hidden');
+      });
       
       // Update page title and content based on section
       const titleEl = document.querySelector('.main-header h1');
       const subtitleEl = document.querySelector('.main-header .muted');
       
       switch(section) {
+        case 'dashboard':
+          if (titleEl) titleEl.textContent = 'Dashboard';
+          if (subtitleEl) subtitleEl.textContent = 'Overview of bookings and performance';
+          if (dashboardSection) {
+            dashboardSection.classList.remove('hidden');
+            loadDashboardSection();
+          }
+          break;
         case 'bookings':
           if (titleEl) titleEl.textContent = 'Bookings Management';
           if (subtitleEl) subtitleEl.textContent = 'View and manage all customer bookings';
-          document.querySelector('.content > .grid').style.display = 'grid';
+          if (bookingsSection) {
+            bookingsSection.classList.remove('hidden');
+            renderAppointments();
+          }
+          break;
+        case 'services':
+          if (titleEl) titleEl.textContent = 'Services Management';
+          if (subtitleEl) subtitleEl.textContent = 'Manage salon services and pricing';
+          if (servicesSection) {
+            servicesSection.classList.remove('hidden');
+            loadServicesSection();
+          }
+          break;
+        case 'clients':
+          if (titleEl) titleEl.textContent = 'Clients Management';
+          if (subtitleEl) subtitleEl.textContent = 'View and manage customer information';
+          if (clientsSection) {
+            clientsSection.classList.remove('hidden');
+            loadClientsSection();
+          }
+          break;
+        case 'staff':
+          if (titleEl) titleEl.textContent = 'Staff Management';
+          if (subtitleEl) subtitleEl.textContent = 'Manage staff members and assignments';
+          if (staffSection) {
+            staffSection.classList.remove('hidden');
+            loadStaffSection();
+          }
           break;
         case 'analytics':
           if (titleEl) titleEl.textContent = 'Analytics';
           if (subtitleEl) subtitleEl.textContent = 'Performance metrics and insights';
-          document.querySelector('.content > .grid').style.display = 'none';
           if (analyticsSection) {
             analyticsSection.classList.remove('hidden');
             initAnalytics();
@@ -490,7 +563,6 @@
         case 'reports':
           if (titleEl) titleEl.textContent = 'Reports';
           if (subtitleEl) subtitleEl.textContent = 'Generate and download reports';
-          document.querySelector('.content > .grid').style.display = 'none';
           if (reportsSection) {
             reportsSection.classList.remove('hidden');
             initReports();
@@ -499,7 +571,7 @@
         default:
           if (titleEl) titleEl.textContent = 'Dashboard';
           if (subtitleEl) subtitleEl.textContent = 'Overview of bookings and performance';
-          document.querySelector('.content > .grid').style.display = 'grid';
+          if (dashboardSection) dashboardSection.classList.remove('hidden');
       }
     });
   });
@@ -896,4 +968,1111 @@
     URL.revokeObjectURL(url);
   }
 
+  // ===== NEW FEATURES: FILTERS & ENHANCEMENTS =====
+
+  // Summary cards calculation
+  function updateSummaryCards() {
+    if (!appointments || appointments.length === 0) return;
+    
+    const today = new Date().toISOString().split('T')[0];
+    const todayBookings = appointments.filter(a => a.date === today);
+    const pendingBookings = appointments.filter(a => a.status === 'pending');
+    const completedToday = todayBookings.filter(a => a.status === 'completed');
+    const revenueToday = completedToday.reduce((sum, a) => sum + (parseFloat(a.price) || 0), 0);
+
+    const todayBookingsEl = document.getElementById('todayBookings');
+    const pendingBookingsEl = document.getElementById('pendingBookings');
+    const completedTodayEl = document.getElementById('completedToday');
+    const revenueTodayEl = document.getElementById('revenueToday');
+    
+    if (todayBookingsEl) todayBookingsEl.textContent = todayBookings.length;
+    if (pendingBookingsEl) pendingBookingsEl.textContent = pendingBookings.length;
+    if (completedTodayEl) completedTodayEl.textContent = completedToday.length;
+    if (revenueTodayEl) revenueTodayEl.textContent = formatCurrency(revenueToday);
+  }
+
+  // Filters for appointments table
+  let filteredAppointments = [];
+
+  function applyFilters() {
+    const searchText = document.getElementById('searchClient')?.value.toLowerCase() || '';
+    const statusFilter = document.getElementById('filterStatus')?.value || '';
+    const paymentFilter = document.getElementById('filterPayment')?.value || '';
+
+    filteredAppointments = appointments.filter(appt => {
+      const matchesSearch = !searchText || appt.client.toLowerCase().includes(searchText);
+      const matchesStatus = !statusFilter || appt.status.toLowerCase() === statusFilter;
+      const matchesPayment = !paymentFilter || (appt.paymentMethod || '').toUpperCase() === paymentFilter;
+      
+      return matchesSearch && matchesStatus && matchesPayment;
+    });
+
+    renderFilteredAppointments();
+  }
+
+  function renderFilteredAppointments() {
+    appointmentsTableBody.innerHTML = '';
+
+    const emptyState = document.getElementById('emptyState');
+    const tableWrap = document.getElementById('tableWrap');
+
+    if (!filteredAppointments || filteredAppointments.length === 0) {
+      emptyState.classList.remove('hidden');
+      tableWrap.classList.add('hidden');
+      return;
+    }
+
+    emptyState.classList.add('hidden');
+    tableWrap.classList.remove('hidden');
+
+    filteredAppointments.forEach(appt => {
+      const tr = document.createElement('tr');
+      const statusClass = (appt.status || 'pending').toLowerCase();
+      const statusText = capitalizeFirst(appt.status || 'pending');
+
+      const paymentMethodLabel = appt.paymentMethod
+        ? (String(appt.paymentMethod).toUpperCase() === 'GCASH' ? 'GCash' : capitalizeFirst(String(appt.paymentMethod).toLowerCase()))
+        : '—';
+
+      const paymentMethodRaw = (appt.paymentMethod || '').toString().toLowerCase();
+      let paymentProofHtml = '<span class="muted" style="font-size:12px;">No proof</span>';
+
+      if (paymentMethodRaw === 'cash') {
+        paymentProofHtml = '<span class="muted" style="font-size:12px;">Not required</span>';
+      } else if (appt.paymentMethod && paymentMethodRaw !== 'cash' && appt.receiptImage) {
+        paymentProofHtml = `
+          <a href="${appt.receiptImage}" target="_blank">
+            <img src="${appt.receiptImage}"
+                 alt="Receipt"
+                 style="width:48px;height:48px;object-fit:cover;border-radius:4px;border:1px solid #e5e7eb;" />
+          </a>`;
+      }
+
+      tr.innerHTML = `
+        <td>${escapeHtml(appt.client)}</td>
+        <td>${escapeHtml(appt.service)}</td>
+        <td>${escapeHtml(formatDate(appt.date))}</td>
+        <td>${escapeHtml(formatTime(appt.time))}</td>
+        <td>${escapeHtml(appt.staff || 'Unassigned')}</td>
+        <td><span class="badge badge-${statusClass}">${statusText}</span></td>
+        <td>${paymentMethodLabel}</td>
+        <td>${paymentProofHtml}</td>
+        <td class="actions-cell">
+          ${appt.status === 'pending' ? `<button class="action-btn confirm" onclick="confirmBooking(${appt.id})">Confirm</button>` : ''}
+          ${appt.status !== 'canceled' && appt.status !== 'completed' ? `<button class="action-btn danger" onclick="cancelBooking(${appt.id})">Cancel</button>` : ''}
+          ${appt.status === 'confirmed' ? `<button class="action-btn success" onclick="completeBooking(${appt.id})">Complete</button>` : ''}
+          <button class="action-btn" onclick="viewBookingDetails(${appt.id})">View</button>
+        </td>
+      `;
+      appointmentsTableBody.appendChild(tr);
+    });
+  }
+
+  // Setup filter listeners (only if elements exist)
+  const searchClientEl = document.getElementById('searchClient');
+  const filterStatusEl = document.getElementById('filterStatus');
+  const filterPaymentEl = document.getElementById('filterPayment');
+  
+  if (searchClientEl) searchClientEl.addEventListener('input', applyFilters);
+  if (filterStatusEl) filterStatusEl.addEventListener('change', applyFilters);
+  if (filterPaymentEl) filterPaymentEl.addEventListener('change', applyFilters);
+
+  // Clients Section
+  async function loadClientsSection() {
+    const tbody = document.querySelector('#clientsTable tbody');
+    
+    try {
+      const token = getAuthToken();
+      console.log('Fetching clients with token:', token ? 'Present' : 'Missing');
+      
+      if (!token) {
+        throw new Error('No authentication token found. Please log in again.');
+      }
+      
+      const response = await fetch('http://localhost:3000/api/auth/users', {
+        method: 'GET',
+        headers: { 
+          'Authorization': 'Bearer ' + token,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      console.log('Response status:', response.status, response.statusText);
+      console.log('Response headers:', response.headers.get('content-type'));
+      
+      // Get the raw text first to see what we're getting
+      const rawText = await response.text();
+      console.log('Raw response:', rawText.substring(0, 200));
+      
+      let data;
+      try {
+        data = JSON.parse(rawText);
+      } catch (parseError) {
+        console.error('Failed to parse JSON. Raw response:', rawText);
+        throw new Error('Server returned invalid response. Check if server is running correctly.');
+      }
+      
+      if (!response.ok) {
+        console.error('Error response:', data);
+        throw new Error(data.message || `Server error: ${response.status}`);
+      }
+      
+      const clients = data.data || data || [];
+      
+      console.log('Loaded clients:', clients.length, clients);
+      
+      // Calculate booking counts for each client
+      const bookingCounts = {};
+      appointments.forEach(booking => {
+        const clientName = booking.client;
+        bookingCounts[clientName] = (bookingCounts[clientName] || 0) + 1;
+      });
+      
+      tbody.innerHTML = '';
+      
+      if (clients.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:2rem;color:#6b7280;">No clients found. Clients will appear here after they register.</td></tr>';
+        showNotification('No clients found', 'info');
+        return;
+      }
+      
+      clients.forEach(client => {
+        const clientName = client.NAME || client.name || 'N/A';
+        const bookingCount = bookingCounts[clientName] || 0;
+        
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${escapeHtml(clientName)}</td>
+          <td>${escapeHtml(client.EMAIL_ADDRESS || client.EMAIL || client.email || 'N/A')}</td>
+          <td>${escapeHtml(client.PHONE || client.phone || 'N/A')}</td>
+          <td>${bookingCount}</td>
+          <td>${formatDate(client.CREATED_AT || client.created_at || '')}</td>
+          <td>
+            <button class="action-btn confirm" onclick="viewClientDetails(${client.USER_ID || client.id})">View Profile</button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+      
+      showNotification(`Loaded ${clients.length} client(s)`, 'success');
+    } catch (err) {
+      console.error('Failed to load clients:', err);
+      tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:2rem;color:#ef4444;">Error: ${err.message}<br><small>Check console for details</small></td></tr>`;
+      showNotification('Failed to load clients: ' + err.message, 'error');
+    }
+  }
+
+  // Staff Section
+  async function loadStaffSection() {
+    const tbody = document.querySelector('#staffTable tbody');
+    
+    try {
+      const token = getAuthToken();
+      console.log('Fetching staff with token:', token ? 'Present' : 'Missing');
+      
+      if (!token) {
+        throw new Error('No authentication token found. Please log in again.');
+      }
+      
+      const response = await fetch('http://localhost:3000/api/staff', {
+        method: 'GET',
+        headers: { 
+          'Authorization': 'Bearer ' + token,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      console.log('Staff response status:', response.status, response.statusText);
+      
+      let data;
+      try {
+        data = await response.json();
+      } catch (parseError) {
+        console.error('Failed to parse JSON:', parseError);
+        throw new Error('Server returned invalid response');
+      }
+      
+      if (!response.ok) {
+        console.error('Error response:', data);
+        throw new Error(data.message || `Server error: ${response.status}`);
+      }
+      
+      const staff = data.data || data || [];
+      
+      console.log('Loaded staff:', staff.length, staff);
+      
+      tbody.innerHTML = '';
+      
+      if (staff.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:2rem;color:#6b7280;">No staff members found. Add staff members to manage your team.</td></tr>';
+        showNotification('No staff members found', 'info');
+        return;
+      }
+      
+      // Count assigned bookings per staff member
+      const staffBookings = {};
+      appointments.forEach(booking => {
+        const staffName = booking.staff || booking.STAFF_NAME;
+        if (staffName) {
+          staffBookings[staffName] = (staffBookings[staffName] || 0) + 1;
+        }
+      });
+      
+      staff.forEach(member => {
+        const staffName = member.full_name || member.FULL_NAME || member.name;
+        const assignedCount = staffBookings[staffName] || 0;
+        const staffId = member.staff_id || member.STAFF_ID || member.id;
+        
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${escapeHtml(staffName || 'N/A')}</td>
+          <td>${escapeHtml(member.email || member.EMAIL || 'N/A')}</td>
+          <td>${escapeHtml(member.phone || member.PHONE || 'N/A')}</td>
+          <td>${escapeHtml(member.role || member.ROLE || 'Staff')}</td>
+          <td>
+            ${assignedCount > 0 ? `<a href="#" onclick="viewStaffClients(${staffId}, '${escapeHtml(staffName)}'); return false;" style="color: #3b82f6; text-decoration: underline; cursor: pointer;">${assignedCount}</a>` : assignedCount}
+          </td>
+          <td>
+            <button class="action-btn warning" onclick="editStaff(${staffId})">Edit</button>
+            <button class="action-btn danger" onclick="deleteStaff(${staffId})">Delete</button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+      
+      showNotification(`Loaded ${staff.length} staff member(s)`, 'success');
+    } catch (err) {
+      console.error('Failed to load staff:', err);
+      tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:2rem;color:#ef4444;">Error: ${err.message}<br><small>Check console for details</small></td></tr>`;
+      showNotification('Failed to load staff: ' + err.message, 'error');
+    }
+  }
+
+  // Services Section
+  async function loadServicesSection() {
+    try {
+      const token = getAuthToken();
+      const response = await fetch('http://localhost:3000/api/services', {
+        headers: { 'Authorization': 'Bearer ' + token }
+      });
+      
+      if (!response.ok) throw new Error('Failed to fetch services');
+      
+      const data = await response.json();
+      const services = data.data || data || [];
+      
+      const grid = document.getElementById('servicesGrid');
+      grid.innerHTML = '';
+      
+      services.forEach(service => {
+        const card = document.createElement('div');
+        card.className = 'service-card';
+        card.innerHTML = `
+          ${service.IMAGE_URL ? `<img src="${service.IMAGE_URL}" alt="${escapeHtml(service.SERVICE_NAME)}">` : ''}
+          <div class="service-card-body">
+            <h3>${escapeHtml(service.SERVICE_NAME || service.name || 'Service')}</h3>
+            <p>${escapeHtml(service.DESCRIPTION || service.description || '')}</p>
+            <span class="price">${formatCurrency(service.PRICE || service.price || 0)}</span>
+            <div class="service-actions">
+              <button class="action-btn confirm" onclick="editService(${service.SERVICE_ID || service.id})">Edit</button>
+              <button class="action-btn danger" onclick="deleteService(${service.SERVICE_ID || service.id})">Delete</button>
+            </div>
+          </div>
+        `;
+        grid.appendChild(card);
+      });
+    } catch (err) {
+      console.error('Failed to load services:', err);
+      showNotification('Failed to load services', 'error');
+    }
+  }
+
+  // Global action functions (accessible from onclick)
+  window.confirmBooking = async function(id) {
+    if (!confirm('Confirm this booking?')) return;
+    try {
+      const token = getAuthToken();
+      const response = await fetch(`http://localhost:3000/api/bookings/${id}/confirm`, {
+        method: 'PATCH',
+        headers: { 'Authorization': 'Bearer ' + token }
+      });
+      if (response.ok) {
+        showNotification('Booking confirmed', 'success');
+        fetchBookings();
+      }
+    } catch (err) {
+      showNotification('Failed to confirm booking', 'error');
+    }
+  };
+
+  window.cancelBooking = async function(id) {
+    if (!confirm('Cancel this booking?')) return;
+    try {
+      const token = getAuthToken();
+      const response = await fetch(`http://localhost:3000/api/bookings/${id}/cancel`, {
+        method: 'PATCH',
+        headers: { 'Authorization': 'Bearer ' + token }
+      });
+      if (response.ok) {
+        showNotification('Booking canceled', 'success');
+        fetchBookings();
+      }
+    } catch (err) {
+      showNotification('Failed to cancel booking', 'error');
+    }
+  };
+
+  window.completeBooking = async function(id) {
+    if (!confirm('Mark this booking as completed?')) return;
+    try {
+      const token = getAuthToken();
+      const response = await fetch(`http://localhost:3000/api/bookings/${id}/complete`, {
+        method: 'PATCH',
+        headers: { 'Authorization': 'Bearer ' + token }
+      });
+      if (response.ok) {
+        showNotification('Booking completed', 'success');
+        fetchBookings();
+      }
+    } catch (err) {
+      showNotification('Failed to complete booking', 'error');
+    }
+  };
+
+  window.viewBookingDetails = function(id) {
+    const booking = appointments.find(a => a.id === id);
+    if (booking) {
+      alert(`Booking Details:\n\nClient: ${booking.client}\nService: ${booking.service}\nDate: ${booking.date}\nTime: ${booking.time}\nStatus: ${booking.status}`);
+    }
+  };
+
+  window.viewClientDetails = async function(userId) {
+    try {
+      const token = getAuthToken();
+      const response = await fetch(`http://localhost:3000/api/auth/users`, {
+        headers: { 'Authorization': 'Bearer ' + token }
+      });
+      
+      if (!response.ok) throw new Error('Failed to fetch client data');
+      
+      const data = await response.json();
+      const clients = data.data || [];
+      const client = clients.find(c => (c.USER_ID || c.id) === userId);
+      
+      if (!client) {
+        alert('Client not found');
+        return;
+      }
+      
+      // Get client's bookings
+      const clientBookings = appointments.filter(a => a.client === (client.NAME || client.name));
+      
+      const bookingHistory = clientBookings.length > 0 
+        ? clientBookings.map(b => `
+            <tr>
+              <td>${escapeHtml(b.service)}</td>
+              <td>${formatDate(b.date)}</td>
+              <td>${formatTime(b.time)}</td>
+              <td><span class="badge badge-${b.status.toLowerCase()}">${capitalizeFirst(b.status)}</span></td>
+              <td>${formatCurrency(b.price)}</td>
+            </tr>
+          `).join('')
+        : '<tr><td colspan="5" style="text-align:center;color:#6b7280;">No bookings yet</td></tr>';
+      
+      const totalSpent = clientBookings
+        .filter(b => b.status === 'confirmed')
+        .reduce((sum, b) => sum + parseFloat(b.price || 0), 0);
+      
+      const modalHTML = `
+        <div style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:10000;display:flex;align-items:center;justify-content:center;" id="clientModal">
+          <div style="background:white;border-radius:12px;padding:2rem;max-width:800px;width:90%;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;">
+              <h2 style="margin:0;">Client Profile</h2>
+              <button onclick="document.getElementById('clientModal').remove()" style="background:transparent;border:none;font-size:1.5rem;cursor:pointer;color:#6b7280;">✕</button>
+            </div>
+            
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:2rem;padding:1rem;background:#f9fafb;border-radius:8px;">
+              <div>
+                <p style="margin:0;font-size:0.875rem;color:#6b7280;">Full Name</p>
+                <p style="margin:0.25rem 0 0 0;font-weight:600;">${escapeHtml(client.NAME || client.name || 'N/A')}</p>
+              </div>
+              <div>
+                <p style="margin:0;font-size:0.875rem;color:#6b7280;">Email</p>
+                <p style="margin:0.25rem 0 0 0;font-weight:600;">${escapeHtml(client.EMAIL_ADDRESS || client.EMAIL || client.email || 'N/A')}</p>
+              </div>
+              <div>
+                <p style="margin:0;font-size:0.875rem;color:#6b7280;">Phone</p>
+                <p style="margin:0.25rem 0 0 0;font-weight:600;">${escapeHtml(client.PHONE || client.phone || 'N/A')}</p>
+              </div>
+              <div>
+                <p style="margin:0;font-size:0.875rem;color:#6b7280;">Gender</p>
+                <p style="margin:0.25rem 0 0 0;font-weight:600;">${escapeHtml(client.GENDER || client.gender || 'N/A')}</p>
+              </div>
+              <div>
+                <p style="margin:0;font-size:0.875rem;color:#6b7280;">Total Bookings</p>
+                <p style="margin:0.25rem 0 0 0;font-weight:600;color:#667eea;">${clientBookings.length}</p>
+              </div>
+              <div>
+                <p style="margin:0;font-size:0.875rem;color:#6b7280;">Total Spent</p>
+                <p style="margin:0.25rem 0 0 0;font-weight:600;color:#10b981;">${formatCurrency(totalSpent)}</p>
+              </div>
+              <div>
+                <p style="margin:0;font-size:0.875rem;color:#6b7280;">Member Since</p>
+                <p style="margin:0.25rem 0 0 0;font-weight:600;">${formatDate(client.CREATED_AT || client.created_at || '')}</p>
+              </div>
+              <div>
+                <p style="margin:0;font-size:0.875rem;color:#6b7280;">Account Status</p>
+                <p style="margin:0.25rem 0 0 0;font-weight:600;color:#10b981;">Active</p>
+              </div>
+            </div>
+            
+            <h3 style="margin:0 0 1rem 0;">Booking History</h3>
+            <div style="overflow-x:auto;">
+              <table style="width:100%;border-collapse:collapse;">
+                <thead>
+                  <tr style="background:#f3f4f6;">
+                    <th style="padding:0.75rem;text-align:left;font-size:0.875rem;font-weight:600;color:#6b7280;">Service</th>
+                    <th style="padding:0.75rem;text-align:left;font-size:0.875rem;font-weight:600;color:#6b7280;">Date</th>
+                    <th style="padding:0.75rem;text-align:left;font-size:0.875rem;font-weight:600;color:#6b7280;">Time</th>
+                    <th style="padding:0.75rem;text-align:left;font-size:0.875rem;font-weight:600;color:#6b7280;">Status</th>
+                    <th style="padding:0.75rem;text-align:right;font-size:0.875rem;font-weight:600;color:#6b7280;">Amount</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${bookingHistory}
+                </tbody>
+              </table>
+            </div>
+            
+            <div style="margin-top:1.5rem;display:flex;justify-content:flex-end;gap:0.5rem;">
+              <button onclick="document.getElementById('clientModal').remove()" class="action-btn">Close</button>
+            </div>
+          </div>
+        </div>
+      `;
+      
+      document.body.insertAdjacentHTML('beforeend', modalHTML);
+    } catch (err) {
+      console.error('Failed to load client details:', err);
+      alert('Failed to load client details: ' + err.message);
+    }
+  };
+
+  window.editStaff = async function(id) {
+    try {
+      const token = getAuthToken();
+      
+      // Fetch staff details
+      const response = await fetch(`http://localhost:3000/api/staff/${id}`, {
+        headers: { 'Authorization': 'Bearer ' + token }
+      });
+      
+      if (!response.ok) throw new Error('Failed to fetch staff details');
+      
+      const result = await response.json();
+      const staff = result.data;
+      
+      // Create edit modal
+      const modalHTML = `
+        <div style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:10000;display:flex;align-items:center;justify-content:center;" id="editStaffModal">
+          <div style="background:white;border-radius:12px;padding:2rem;max-width:500px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;">
+              <h2 style="margin:0;">Edit Staff Member</h2>
+              <button onclick="document.getElementById('editStaffModal').remove()" style="background:transparent;border:none;font-size:1.5rem;cursor:pointer;color:#6b7280;">✕</button>
+            </div>
+            
+            <form id="editStaffForm" style="display:flex;flex-direction:column;gap:1rem;">
+              <div>
+                <label style="display:block;margin-bottom:0.5rem;font-weight:600;color:#374151;">Full Name *</label>
+                <input type="text" id="editFullName" value="${escapeHtml(staff.full_name)}" required style="width:100%;padding:0.75rem;border:1px solid #d1d5db;border-radius:6px;font-size:1rem;">
+              </div>
+              
+              <div>
+                <label style="display:block;margin-bottom:0.5rem;font-weight:600;color:#374151;">Email *</label>
+                <input type="email" id="editEmail" value="${escapeHtml(staff.email)}" required style="width:100%;padding:0.75rem;border:1px solid #d1d5db;border-radius:6px;font-size:1rem;">
+              </div>
+              
+              <div>
+                <label style="display:block;margin-bottom:0.5rem;font-weight:600;color:#374151;">Phone</label>
+                <input type="tel" id="editPhone" value="${escapeHtml(staff.phone || '')}" style="width:100%;padding:0.75rem;border:1px solid #d1d5db;border-radius:6px;font-size:1rem;">
+              </div>
+              
+              <div>
+                <label style="display:block;margin-bottom:0.5rem;font-weight:600;color:#374151;">Role</label>
+                <input type="text" id="editRole" value="${escapeHtml(staff.role || 'Staff')}" style="width:100%;padding:0.75rem;border:1px solid #d1d5db;border-radius:6px;font-size:1rem;">
+              </div>
+              
+              <div>
+                <label style="display:block;margin-bottom:0.5rem;font-weight:600;color:#374151;">Gender</label>
+                <select id="editGender" style="width:100%;padding:0.75rem;border:1px solid #d1d5db;border-radius:6px;font-size:1rem;">
+                  <option value="">Not specified</option>
+                  <option value="Male" ${staff.gender === 'Male' ? 'selected' : ''}>Male</option>
+                  <option value="Female" ${staff.gender === 'Female' ? 'selected' : ''}>Female</option>
+                </select>
+              </div>
+              
+              <div style="display:flex;gap:0.5rem;margin-top:1rem;">
+                <button type="submit" class="action-btn confirm" style="flex:1;">Save Changes</button>
+                <button type="button" onclick="document.getElementById('editStaffModal').remove()" class="action-btn" style="flex:1;">Cancel</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      `;
+      
+      document.body.insertAdjacentHTML('beforeend', modalHTML);
+      
+      // Handle form submission
+      document.getElementById('editStaffForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const updatedData = {
+          full_name: document.getElementById('editFullName').value,
+          email: document.getElementById('editEmail').value,
+          phone: document.getElementById('editPhone').value,
+          role: document.getElementById('editRole').value,
+          gender: document.getElementById('editGender').value
+        };
+        
+        try {
+          const updateResponse = await fetch(`http://localhost:3000/api/staff/${id}`, {
+            method: 'PUT',
+            headers: {
+              'Authorization': 'Bearer ' + token,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(updatedData)
+          });
+          
+          if (!updateResponse.ok) {
+            const error = await updateResponse.json();
+            throw new Error(error.message || 'Failed to update staff');
+          }
+          
+          showNotification('Staff member updated successfully', 'success');
+          document.getElementById('editStaffModal').remove();
+          loadStaffSection();
+        } catch (error) {
+          showNotification('Error: ' + error.message, 'error');
+        }
+      });
+    } catch (err) {
+      console.error('Failed to load staff details:', err);
+      showNotification('Failed to load staff details: ' + err.message, 'error');
+    }
+  };
+
+  window.deleteStaff = async function(id) {
+    if (!confirm('Are you sure you want to delete this staff member? This action cannot be undone.')) return;
+    
+    try {
+      const token = getAuthToken();
+      const response = await fetch(`http://localhost:3000/api/staff/${id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': 'Bearer ' + token }
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to delete staff');
+      }
+      
+      const result = await response.json();
+      showNotification(result.message || 'Staff member deleted successfully', 'success');
+      
+      // Find and remove the row from the table
+      const rows = document.querySelectorAll('#staffTable tbody tr');
+      rows.forEach(row => {
+        const deleteBtn = row.querySelector(`button[onclick*="deleteStaff(${id})"]`);
+        if (deleteBtn) {
+          row.remove();
+        }
+      });
+      
+      // Check if table is now empty
+      const tbody = document.querySelector('#staffTable tbody');
+      if (tbody && tbody.children.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:2rem;color:#6b7280;">No staff members found. Add staff members to manage your team.</td></tr>';
+      }
+    } catch (err) {
+      console.error('Failed to delete staff:', err);
+      showNotification('Error: ' + err.message, 'error');
+    }
+  };
+
+  // View clients who chose a specific staff member
+  window.viewStaffClients = async function(staffId, staffName) {
+    try {
+      const token = getAuthToken();
+      console.log('Fetching bookings for staff ID:', staffId);
+      console.log('API URL:', `http://localhost:3000/api/staff/${staffId}/bookings`);
+      
+      const response = await fetch(`http://localhost:3000/api/staff/${staffId}/bookings`, {
+        method: 'GET',
+        headers: { 
+          'Authorization': 'Bearer ' + token,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      console.log('Response status:', response.status, response.statusText);
+      console.log('Response headers:', response.headers);
+      
+      // Check content type before parsing
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        const textResponse = await response.text();
+        console.error('Non-JSON response received:', textResponse.substring(0, 200));
+        throw new Error('Server returned non-JSON response. Please check if the server is running correctly.');
+      }
+      
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to load staff bookings');
+      }
+      
+      const bookings = data.data.bookings || [];
+      
+      // Create modal to display clients
+      const modal = document.createElement('div');
+      modal.id = 'staffClientsModal';
+      modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:1000;';
+      
+      const modalContent = document.createElement('div');
+      modalContent.style.cssText = 'background:white;border-radius:8px;padding:2rem;max-width:800px;width:90%;max-height:80vh;overflow-y:auto;box-shadow:0 4px 6px rgba(0,0,0,0.1);';
+      
+      let bookingsHTML = '';
+      if (bookings.length === 0) {
+        bookingsHTML = '<p style="text-align:center;color:#6b7280;padding:2rem;">No bookings found for this staff member.</p>';
+      } else {
+        bookingsHTML = `
+          <table style="width:100%;border-collapse:collapse;">
+            <thead>
+              <tr style="background:#f3f4f6;text-align:left;">
+                <th style="padding:0.75rem;border-bottom:2px solid #e5e7eb;">Client</th>
+                <th style="padding:0.75rem;border-bottom:2px solid #e5e7eb;">Service</th>
+                <th style="padding:0.75rem;border-bottom:2px solid #e5e7eb;">Date & Time</th>
+                <th style="padding:0.75rem;border-bottom:2px solid #e5e7eb;">Status</th>
+                <th style="padding:0.75rem;border-bottom:2px solid #e5e7eb;">Payment</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${bookings.map(booking => {
+                const bookingDate = new Date(booking.BOOKING_DATE).toLocaleDateString();
+                const bookingTime = booking.BOOKING_TIME || 'N/A';
+                return `
+                  <tr style="border-bottom:1px solid #e5e7eb;">
+                    <td style="padding:0.75rem;">
+                      <div style="font-weight:600;">${escapeHtml(booking.client_name || 'Guest')}</div>
+                      <div style="font-size:0.875rem;color:#6b7280;">${escapeHtml(booking.client_email || 'N/A')}</div>
+                      ${booking.client_phone ? `<div style="font-size:0.875rem;color:#6b7280;">${escapeHtml(booking.client_phone)}</div>` : ''}
+                    </td>
+                    <td style="padding:0.75rem;">
+                      <div>${escapeHtml(booking.SERVICE_NAME || 'N/A')}</div>
+                      <div style="font-size:0.875rem;color:#6b7280;">₱${parseFloat(booking.service_price || 0).toFixed(2)}</div>
+                    </td>
+                    <td style="padding:0.75rem;">
+                      <div>${bookingDate}</div>
+                      <div style="font-size:0.875rem;color:#6b7280;">${bookingTime}</div>
+                    </td>
+                    <td style="padding:0.75rem;">
+                      <span style="padding:0.25rem 0.5rem;border-radius:4px;font-size:0.875rem;font-weight:500;background:${getStatusColor(booking.booking_status)};color:white;">
+                        ${escapeHtml(booking.booking_status || 'N/A')}
+                      </span>
+                    </td>
+                    <td style="padding:0.75rem;">
+                      <span style="padding:0.25rem 0.5rem;border-radius:4px;font-size:0.875rem;font-weight:500;background:${getPaymentStatusColor(booking.payment_status)};color:white;">
+                        ${escapeHtml(booking.payment_status || 'pending')}
+                      </span>
+                    </td>
+                  </tr>
+                `;
+              }).join('')}
+            </tbody>
+          </table>
+        `;
+      }
+      
+      modalContent.innerHTML = `
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;border-bottom:2px solid #e5e7eb;padding-bottom:1rem;">
+          <div>
+            <h2 style="margin:0;color:#1f2937;">Clients for ${escapeHtml(staffName)}</h2>
+            <p style="margin:0.5rem 0 0 0;color:#6b7280;">Total bookings: ${bookings.length}</p>
+          </div>
+          <button onclick="document.getElementById('staffClientsModal').remove()" style="background:#ef4444;color:white;border:none;padding:0.5rem 1rem;border-radius:6px;cursor:pointer;font-weight:600;">Close</button>
+        </div>
+        ${bookingsHTML}
+      `;
+      
+      modal.appendChild(modalContent);
+      document.body.appendChild(modal);
+      
+      // Close modal when clicking outside
+      modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+          modal.remove();
+        }
+      });
+      
+    } catch (err) {
+      console.error('Failed to load staff clients:', err);
+      showNotification('Error: ' + err.message, 'error');
+    }
+  };
+
+  // Helper function for status colors
+  function getStatusColor(status) {
+    const colors = {
+      'pending': '#f59e0b',
+      'confirmed': '#10b981',
+      'completed': '#3b82f6',
+      'cancelled': '#ef4444',
+      'pending_payment': '#f59e0b'
+    };
+    return colors[status] || '#6b7280';
+  }
+
+  // Helper function for payment status colors
+  function getPaymentStatusColor(status) {
+    const colors = {
+      'pending': '#f59e0b',
+      'paid': '#10b981',
+      'partial': '#3b82f6',
+      'failed': '#ef4444'
+    };
+    return colors[status] || '#6b7280';
+  }
+  
+  window.addStaff = function() {
+    const modalHTML = `
+      <div style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:10000;display:flex;align-items:center;justify-content:center;" id="addStaffModal">
+        <div style="background:white;border-radius:12px;padding:2rem;max-width:500px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;">
+            <h2 style="margin:0;">Add New Staff Member</h2>
+            <button onclick="document.getElementById('addStaffModal').remove()" style="background:transparent;border:none;font-size:1.5rem;cursor:pointer;color:#6b7280;">✕</button>
+          </div>
+          
+          <form id="addStaffForm" style="display:flex;flex-direction:column;gap:1rem;">
+            <div>
+              <label style="display:block;margin-bottom:0.5rem;font-weight:600;color:#374151;">Full Name *</label>
+              <input type="text" id="addFullName" required style="width:100%;padding:0.75rem;border:1px solid #d1d5db;border-radius:6px;font-size:1rem;">
+            </div>
+            
+            <div>
+              <label style="display:block;margin-bottom:0.5rem;font-weight:600;color:#374151;">Email *</label>
+              <input type="email" id="addEmail" required style="width:100%;padding:0.75rem;border:1px solid #d1d5db;border-radius:6px;font-size:1rem;">
+            </div>
+            
+            <div>
+              <label style="display:block;margin-bottom:0.5rem;font-weight:600;color:#374151;">Phone</label>
+              <input type="tel" id="addPhone" style="width:100%;padding:0.75rem;border:1px solid #d1d5db;border-radius:6px;font-size:1rem;">
+            </div>
+            
+            <div>
+              <label style="display:block;margin-bottom:0.5rem;font-weight:600;color:#374151;">Role</label>
+              <input type="text" id="addRole" value="Staff" style="width:100%;padding:0.75rem;border:1px solid #d1d5db;border-radius:6px;font-size:1rem;">
+            </div>
+            
+            <div>
+              <label style="display:block;margin-bottom:0.5rem;font-weight:600;color:#374151;">Gender</label>
+              <select id="addGender" style="width:100%;padding:0.75rem;border:1px solid #d1d5db;border-radius:6px;font-size:1rem;">
+                <option value="">Not specified</option>
+                <option value="Male">Male</option>
+                <option value="Female">Female</option>
+              </select>
+            </div>
+            
+            <div style="display:flex;gap:0.5rem;margin-top:1rem;">
+              <button type="submit" class="action-btn confirm" style="flex:1;">Add Staff Member</button>
+              <button type="button" onclick="document.getElementById('addStaffModal').remove()" class="action-btn" style="flex:1;">Cancel</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    `;
+    
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+    
+    // Handle form submission
+    document.getElementById('addStaffForm').addEventListener('submit', async function(e) {
+      e.preventDefault();
+      
+      const staffData = {
+        full_name: document.getElementById('addFullName').value,
+        email: document.getElementById('addEmail').value,
+        phone: document.getElementById('addPhone').value,
+        role: document.getElementById('addRole').value,
+        gender: document.getElementById('addGender').value
+      };
+      
+      try {
+        const token = getAuthToken();
+        const response = await fetch('http://localhost:3000/api/staff', {
+          method: 'POST',
+          headers: {
+            'Authorization': 'Bearer ' + token,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(staffData)
+        });
+        
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.message || 'Failed to add staff');
+        }
+        
+        showNotification('Staff member added successfully', 'success');
+        document.getElementById('addStaffModal').remove();
+        loadStaffSection();
+      } catch (error) {
+        showNotification('Error: ' + error.message, 'error');
+      }
+    });
+  };
+
+  window.editService = function(id) {
+    window.location.href = `editservice.html?id=${id}`;
+  };
+
+  window.deleteService = async function(id) {
+    if (!confirm('Delete this service?')) return;
+    try {
+      const token = getAuthToken();
+      const response = await fetch(`http://localhost:3000/api/services/${id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': 'Bearer ' + token }
+      });
+      if (response.ok) {
+        showNotification('Service deleted', 'success');
+        loadServicesSection();
+      }
+    } catch (err) {
+      showNotification('Failed to delete service', 'error');
+    }
+  };
+
+  // ===== BOOKING CALENDAR =====
+  let currentCalendarMonth = new Date().getMonth();
+  let currentCalendarYear = new Date().getFullYear();
+
+  function initializeCalendar() {
+    const prevBtn = document.getElementById('prevMonth');
+    const nextBtn = document.getElementById('nextMonth');
+    
+    if (prevBtn) {
+      prevBtn.addEventListener('click', () => {
+        currentCalendarMonth--;
+        if (currentCalendarMonth < 0) {
+          currentCalendarMonth = 11;
+          currentCalendarYear--;
+        }
+        renderCalendar();
+      });
+    }
+    
+    if (nextBtn) {
+      nextBtn.addEventListener('click', () => {
+        currentCalendarMonth++;
+        if (currentCalendarMonth > 11) {
+          currentCalendarMonth = 0;
+          currentCalendarYear++;
+        }
+        renderCalendar();
+      });
+    }
+    
+    renderCalendar();
+  }
+
+  function renderCalendar() {
+    const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
+                        'July', 'August', 'September', 'October', 'November', 'December'];
+    const monthTitle = document.getElementById('currentMonth');
+    const calendarGrid = document.getElementById('calendarGrid');
+    
+    if (!monthTitle || !calendarGrid) return;
+    
+    monthTitle.textContent = `${monthNames[currentCalendarMonth]} ${currentCalendarYear}`;
+    
+    // Get bookings for this month
+    const bookedDates = new Set();
+    if (appointments && appointments.length > 0) {
+      appointments.forEach(appt => {
+        if (appt.date) {
+          const apptDate = new Date(appt.date);
+          if (apptDate.getMonth() === currentCalendarMonth && 
+              apptDate.getFullYear() === currentCalendarYear) {
+            bookedDates.add(apptDate.getDate());
+          }
+        }
+      });
+    }
+    
+    // Get first day of month and total days
+    const firstDay = new Date(currentCalendarYear, currentCalendarMonth, 1).getDay();
+    const daysInMonth = new Date(currentCalendarYear, currentCalendarMonth + 1, 0).getDate();
+    const today = new Date();
+    const isCurrentMonth = today.getMonth() === currentCalendarMonth && 
+                          today.getFullYear() === currentCalendarYear;
+    const todayDate = isCurrentMonth ? today.getDate() : -1;
+    
+    // Clear calendar
+    calendarGrid.innerHTML = '';
+    
+    // Add day headers
+    const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    dayNames.forEach(day => {
+      const dayHeader = document.createElement('div');
+      dayHeader.textContent = day;
+      dayHeader.style.cssText = 'text-align: center; font-weight: 600; color: #6b7280; padding: 0.5rem; font-size: 0.875rem;';
+      calendarGrid.appendChild(dayHeader);
+    });
+    
+    // Add empty cells for days before month starts
+    for (let i = 0; i < firstDay; i++) {
+      const emptyCell = document.createElement('div');
+      emptyCell.style.cssText = 'padding: 0.75rem; text-align: center;';
+      calendarGrid.appendChild(emptyCell);
+    }
+    
+    // Add day cells
+    for (let day = 1; day <= daysInMonth; day++) {
+      const dayCell = document.createElement('div');
+      dayCell.textContent = day;
+      
+      let bgColor = '#f9fafb';
+      let textColor = '#1f2937';
+      let fontWeight = '400';
+      let border = '1px solid #e5e7eb';
+      
+      // Check if this day has bookings
+      if (bookedDates.has(day)) {
+        bgColor = '#d1fae5';
+        textColor = '#065f46';
+        fontWeight = '600';
+        border = '2px solid #10b981';
+      }
+      
+      // Check if today
+      if (day === todayDate) {
+        bgColor = '#dbeafe';
+        textColor = '#1e40af';
+        fontWeight = '700';
+        border = '2px solid #3b82f6';
+      }
+      
+      // If both booked and today
+      if (bookedDates.has(day) && day === todayDate) {
+        bgColor = '#bfdbfe';
+        textColor = '#065f46';
+        fontWeight = '700';
+        border = '2px solid #3b82f6';
+      }
+      
+      dayCell.style.cssText = `
+        padding: 0.75rem;
+        text-align: center;
+        background: ${bgColor};
+        color: ${textColor};
+        font-weight: ${fontWeight};
+        border: ${border};
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.2s;
+        min-height: 45px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      `;
+      
+      // Add click handler to show bookings for that day
+      if (bookedDates.has(day)) {
+        dayCell.addEventListener('click', () => showDayBookings(day));
+        dayCell.addEventListener('mouseenter', () => {
+          dayCell.style.transform = 'scale(1.05)';
+          dayCell.style.boxShadow = '0 4px 6px rgba(0,0,0,0.1)';
+        });
+        dayCell.addEventListener('mouseleave', () => {
+          dayCell.style.transform = 'scale(1)';
+          dayCell.style.boxShadow = 'none';
+        });
+      }
+      
+      calendarGrid.appendChild(dayCell);
+    }
+  }
+
+  function showDayBookings(day) {
+    const selectedDate = new Date(currentCalendarYear, currentCalendarMonth, day);
+    const dateStr = selectedDate.toISOString().split('T')[0];
+    
+    const dayBookings = appointments.filter(appt => {
+      if (!appt.date) return false;
+      const apptDate = new Date(appt.date).toISOString().split('T')[0];
+      return apptDate === dateStr;
+    });
+    
+    if (dayBookings.length === 0) return;
+    
+    // Create modal to show bookings
+    const modal = document.createElement('div');
+    modal.id = 'dayBookingsModal';
+    modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:1000;';
+    
+    const modalContent = document.createElement('div');
+    modalContent.style.cssText = 'background:white;border-radius:12px;padding:2rem;max-width:700px;width:90%;max-height:80vh;overflow-y:auto;box-shadow:0 4px 6px rgba(0,0,0,0.1);';
+    
+    modalContent.innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;border-bottom:2px solid #e5e7eb;padding-bottom:1rem;">
+        <h2 style="margin:0;color:#1f2937;">Bookings for ${selectedDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</h2>
+        <button onclick="document.getElementById('dayBookingsModal').remove()" style="background:#ef4444;color:white;border:none;padding:0.5rem 1rem;border-radius:6px;cursor:pointer;font-weight:600;">Close</button>
+      </div>
+      <table style="width:100%;border-collapse:collapse;">
+        <thead>
+          <tr style="background:#f3f4f6;text-align:left;">
+            <th style="padding:0.75rem;border-bottom:2px solid #e5e7eb;">Time</th>
+            <th style="padding:0.75rem;border-bottom:2px solid #e5e7eb;">Client</th>
+            <th style="padding:0.75rem;border-bottom:2px solid #e5e7eb;">Service</th>
+            <th style="padding:0.75rem;border-bottom:2px solid #e5e7eb;">Staff</th>
+            <th style="padding:0.75rem;border-bottom:2px solid #e5e7eb;">Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${dayBookings.map(booking => `
+            <tr style="border-bottom:1px solid #e5e7eb;">
+              <td style="padding:0.75rem;">${escapeHtml(formatTime(booking.time))}</td>
+              <td style="padding:0.75rem;">${escapeHtml(booking.client)}</td>
+              <td style="padding:0.75rem;">${escapeHtml(booking.service)}</td>
+              <td style="padding:0.75rem;">${escapeHtml(booking.staff || '—')}</td>
+              <td style="padding:0.75rem;">
+                <span style="padding:0.25rem 0.5rem;border-radius:4px;font-size:0.875rem;font-weight:500;background:${getStatusColor(booking.status)};color:white;">
+                  ${escapeHtml(capitalizeFirst(booking.status || 'pending'))}
+                </span>
+              </td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    `;
+    
+    modal.appendChild(modalContent);
+    document.body.appendChild(modal);
+    
+    // Close modal when clicking outside
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) {
+        modal.remove();
+      }
+    });
+  }
+
+  // Initialize calendar when dashboard is loaded
+  const originalLoadDashboard = loadDashboardSection;
+  loadDashboardSection = function() {
+    originalLoadDashboard();
+    initializeCalendar();
+  };
+
 })();
+

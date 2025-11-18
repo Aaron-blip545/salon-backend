@@ -15,6 +15,9 @@ router.get('/all', authenticateToken, requireRole(['admin']), bookingController.
 router.get('/pending', authenticateToken, requireRole(['admin']), bookingController.getPendingBookings);
 router.get('/analytics', authenticateToken, requireRole(['admin']), bookingController.getAnalytics);
 router.patch('/:id/status', authenticateToken, requireRole(['admin']), bookingController.updateBookingStatus);
+router.patch('/:id/confirm', authenticateToken, requireRole(['admin']), bookingController.confirmBooking);
+router.patch('/:id/cancel', authenticateToken, requireRole(['admin']), bookingController.cancelBooking);
+router.patch('/:id/complete', authenticateToken, requireRole(['admin']), bookingController.completeBooking);
 
 
 

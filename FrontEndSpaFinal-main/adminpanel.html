@@ -23,11 +23,34 @@
         </div>
 
         <nav class="nav">
-          <a class="nav-item active" href="#">Dashboard</a>
-          <a class="nav-item" href="#bookings">Bookings</a>
-          <a class="nav-item" href="editservice.html">Services</a>
-          <a class="nav-item" href="#analytics">Analytics</a>
-          <a class="nav-item" href="#reports">Reports</a>
+          <a class="nav-item active" href="#" data-section="dashboard">
+            <span class="nav-icon">📊</span>
+            <span>Dashboard</span>
+          </a>
+          <a class="nav-item" href="#bookings" data-section="bookings">
+            <span class="nav-icon">📅</span>
+            <span>Bookings</span>
+          </a>
+          <a class="nav-item" href="#services" data-section="services">
+            <span class="nav-icon">✂️</span>
+            <span>Services</span>
+          </a>
+          <a class="nav-item" href="#clients" data-section="clients">
+            <span class="nav-icon">👥</span>
+            <span>Clients</span>
+          </a>
+          <a class="nav-item" href="#staff" data-section="staff">
+            <span class="nav-icon">👨‍💼</span>
+            <span>Staff</span>
+          </a>
+          <a class="nav-item" href="#analytics" data-section="analytics">
+            <span class="nav-icon">📈</span>
+            <span>Analytics</span>
+          </a>
+          <a class="nav-item" href="#reports" data-section="reports">
+            <span class="nav-icon">📋</span>
+            <span>Reports</span>
+          </a>
         </nav>
 
         <div class="sidebar-footer">
@@ -49,27 +72,79 @@
         </header>
 
         <section class="content">
+          <!-- Dashboard Summary Cards -->
+          <div id="dashboardSection">
+            <div class="summary-cards">
+              <div class="summary-card">
+                <div class="summary-icon">📅</div>
+                <div class="summary-info">
+                  <h4>Today's Bookings</h4>
+                  <p class="summary-value" id="todayBookings">0</p>
+                </div>
+              </div>
+              <div class="summary-card">
+                <div class="summary-icon">⏳</div>
+                <div class="summary-info">
+                  <h4>Pending Bookings</h4>
+                  <p class="summary-value" id="pendingBookings">0</p>
+                </div>
+              </div>
+              <div class="summary-card">
+                <div class="summary-icon">✅</div>
+                <div class="summary-info">
+                  <h4>Completed Today</h4>
+                  <p class="summary-value" id="completedToday">0</p>
+                </div>
+              </div>
+              <div class="summary-card">
+                <div class="summary-icon">💰</div>
+                <div class="summary-info">
+                  <h4>Revenue Today</h4>
+                  <p class="summary-value" id="revenueToday">₱0</p>
+                </div>
+              </div>
+            </div>
+
+          <!-- Booking Calendar -->
+          <div class="card" style="margin-bottom: 2rem;">
+            <div class="card-header">
+              <h2>Booking Calendar</h2>
+              <p class="muted" style="font-size: 0.875rem; margin: 0;">View booked days and appointments</p>
+            </div>
+            <div class="card-body">
+              <div id="bookingCalendar" style="padding: 1rem;">
+                <div class="calendar-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                  <button id="prevMonth" style="background: #3b82f6; color: white; border: none; padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer; font-weight: 600;">← Previous</button>
+                  <h3 id="currentMonth" style="margin: 0; font-size: 1.25rem; color: #1f2937;">Month Year</h3>
+                  <button id="nextMonth" style="background: #3b82f6; color: white; border: none; padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer; font-weight: 600;">Next →</button>
+                </div>
+                <div id="calendarGrid" style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px;">
+                  <!-- Calendar days will be inserted here -->
+                </div>
+                <div id="calendarLegend" style="display: flex; gap: 1.5rem; margin-top: 1rem; font-size: 0.875rem; color: #6b7280;">
+                  <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <div style="width: 16px; height: 16px; background: #10b981; border-radius: 4px;"></div>
+                    <span>Has Bookings</span>
+                  </div>
+                  <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <div style="width: 16px; height: 16px; background: #3b82f6; border-radius: 4px;"></div>
+                    <span>Today</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
           <div class="grid">
             <div class="col col-8">
               <div class="card">
                 <div class="card-header">
-                  <h2>Upcoming Appointments</h2>
-                  <small class="muted">Next 7 days</small>
+                  <h2>Recent Appointments</h2>
+                  <p class="muted" style="font-size: 0.875rem; margin: 0;">Last 10 bookings</p>
                 </div>
                 <div class="card-body">
-                  <!-- Empty state shown when there are no bookings -->
-                  <div id="emptyState" class="empty-state">
-                    <div class="empty-illustration">📭</div>
-                    <h3>No bookings yet</h3>
-                    <p class="muted">You don't have any bookings for the selected period. New bookings will appear here.</p>
-                    <div class="empty-actions">
-                      <button id="refreshBtn" class="action-btn confirm">Refresh</button>
-                      <button id="loadSampleBtn" class="action-btn" style="background:transparent;border:1px solid rgba(59,130,246,0.12);">Load sample data</button>
-                    </div>
-                  </div>
-
-                  <div class="table-wrap hidden" id="tableWrap">
-                    <table id="appointmentsTable">
+                  <div class="table-wrap" id="dashboardTableWrap">
+                    <table id="dashboardAppointmentsTable">
                       <thead>
                         <tr>
                           <th>Client</th>
@@ -78,13 +153,11 @@
                           <th>Time</th>
                           <th>Staff</th>
                           <th>Status</th>
-                          <th>Payment Method</th>
-                          <th>Payment Proof</th>
-                          <th>Actions</th>
+                          <th>Payment</th>
                         </tr>
                       </thead>
                       <tbody>
-                      
+                        <tr><td colspan="7" style="text-align:center;padding:2rem;color:#6b7280;">Loading...</td></tr>
                       </tbody>
                     </table>
                   </div>
@@ -116,6 +189,140 @@
                 <div class="card-body small-muted">
                   <p><strong>Active clients:</strong> <span id="activeClients">0</span></p>
                   <p><strong>New this month:</strong> <span id="newClients">0</span></p>
+                </div>
+              </div>
+            </div>
+          </div>
+          </div>
+
+          <!-- Bookings Section -->
+          <div id="bookingsSection" class="hidden">
+            <div class="grid">
+              <div class="col col-12">
+                <div class="card">
+                  <div class="card-header">
+                    <h2>All Appointments</h2>
+                    <div class="filters-wrapper">
+                      <input type="text" id="searchClient" placeholder="Search by client..." class="filter-input">
+                      <select id="filterStatus" class="filter-select">
+                        <option value="">All Status</option>
+                        <option value="pending">Pending</option>
+                        <option value="confirmed">Confirmed</option>
+                        <option value="completed">Completed</option>
+                        <option value="canceled">Canceled</option>
+                      </select>
+                      <select id="filterPayment" class="filter-select">
+                        <option value="GCASH">GCash</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div class="card-body">
+                    <!-- Empty state shown when there are no bookings -->
+                    <div id="emptyState" class="empty-state">
+                      <div class="empty-illustration">📭</div>
+                      <h3>No bookings yet</h3>
+                      <p class="muted">You don't have any bookings for the selected period. New bookings will appear here.</p>
+                      <div class="empty-actions">
+                        <button id="refreshBtn" class="action-btn confirm">Refresh</button>
+                      </div>
+                    </div>
+
+                    <div class="table-wrap hidden" id="tableWrap">
+                      <table id="appointmentsTable">
+                        <thead>
+                          <tr>
+                            <th>Client</th>
+                            <th>Service</th>
+                            <th>Date</th>
+                            <th>Time</th>
+                            <th>Staff</th>
+                            <th>Status</th>
+                            <th>Payment</th>
+                            <th>Receipt</th>
+                            <th>Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                        
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Clients Section -->
+          <div id="clientsSection" class="hidden">
+            <div class="grid">
+              <div class="col col-12">
+                <div class="card">
+                  <div class="card-header">
+                    <h2>Client Management</h2>
+                    <input type="text" id="searchClients" placeholder="Search clients..." class="filter-input">
+                  </div>
+                  <div class="card-body">
+                    <table id="clientsTable" class="data-table">
+                      <thead>
+                        <tr>
+                          <th>Full Name</th>
+                          <th>Email</th>
+                          <th>Phone</th>
+                          <th>Total Bookings</th>
+                          <th>Joined Date</th>
+                          <th>Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody></tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Staff Section -->
+          <div id="staffSection" class="hidden">
+            <div class="grid">
+              <div class="col col-12">
+                <div class="card">
+                  <div class="card-header">
+                    <h2>Staff Management</h2>
+                    <button class="action-btn confirm" id="addStaffBtn" onclick="addStaff()">+ Add Staff</button>
+                  </div>
+                  <div class="card-body">
+                    <table id="staffTable" class="data-table">
+                      <thead>
+                        <tr>
+                          <th>Full Name</th>
+                          <th>Email</th>
+                          <th>Phone</th>
+                          <th>Role</th>
+                          <th>Assigned Bookings</th>
+                          <th>Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody></tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Services Section -->
+          <div id="servicesSection" class="hidden">
+            <div class="grid">
+              <div class="col col-12">
+                <div class="card">
+                  <div class="card-header">
+                    <h2>Service Management</h2>
+                    <a href="editservice.html" class="action-btn confirm">+ Add Service</a>
+                  </div>
+                  <div class="card-body">
+                    <div id="servicesGrid" class="services-grid"></div>
+                  </div>
                 </div>
               </div>
             </div>

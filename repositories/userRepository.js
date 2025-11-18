@@ -30,13 +30,27 @@ const userRepository = {
     const sql = 'SELECT USER_ID, NAME, EMAIL_ADDRESS, PHONE, ROLE, GENDER, CREATED_AT FROM user WHERE USER_ID = ?';
     const results = await promisifyQuery(sql, [user_id]);
     return results[0] || null;
-  }
-  ,
+  },
+
   // Update user by ID
   updateById: async (user_id, { name, phone }) => {
     const sql = 'UPDATE user SET NAME = ?, PHONE = ? WHERE USER_ID = ?';
     const result = await promisifyQuery(sql, [name, phone, user_id]);
     return result.affectedRows > 0;
+  },
+
+  // Get all users
+  findAll: async () => {
+    try {
+      console.log('[findAll] Executing query for all customers');
+      const sql = 'SELECT USER_ID, NAME, EMAIL_ADDRESS, PHONE, ROLE, GENDER, CREATED_AT FROM user WHERE ROLE = "customer" ORDER BY CREATED_AT DESC';
+      const results = await promisifyQuery(sql, []);
+      console.log('[findAll] Query returned:', results ? results.length : 0, 'results');
+      return results || [];
+    } catch (error) {
+      console.error('[findAll] Repository error:', error);
+      throw error;
+    }
   }
 };
 

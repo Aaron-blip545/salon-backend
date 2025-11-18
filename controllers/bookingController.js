@@ -239,6 +239,66 @@ const bookingController = {
     } catch (error) {
       next(error);
     }
+  },
+
+  // Confirm booking (convenience method)
+  confirmBooking: async (req, res, next) => {
+    try {
+      const { id } = req.params;
+      const user_id = req.user.id;
+      const user_role = req.user.role;
+
+      const result = await bookingService.updateBookingStatus({
+        booking_id: id,
+        status: 'confirmed',
+        user_id,
+        user_role
+      });
+
+      res.json({ success: true, message: result.message });
+    } catch (error) {
+      next(error);
+    }
+  },
+
+  // Cancel booking (admin convenience method)
+  cancelBooking: async (req, res, next) => {
+    try {
+      const { id } = req.params;
+      const user_id = req.user.id;
+      const user_role = req.user.role;
+
+      const result = await bookingService.updateBookingStatus({
+        booking_id: id,
+        status: 'canceled',
+        user_id,
+        user_role
+      });
+
+      res.json({ success: true, message: result.message });
+    } catch (error) {
+      next(error);
+    }
+  },
+
+  // Complete booking (convenience method)
+  completeBooking: async (req, res, next) => {
+    try {
+      const { id } = req.params;
+      const user_id = req.user.id;
+      const user_role = req.user.role;
+
+      const result = await bookingService.updateBookingStatus({
+        booking_id: id,
+        status: 'completed',
+        user_id,
+        user_role
+      });
+
+      res.json({ success: true, message: result.message });
+    } catch (error) {
+      next(error);
+    }
   }
 };
 
