@@ -82,6 +82,7 @@ const bookingRepository = {
         b.BOOKING_DATE,
         b.BOOKING_TIME,
         b.STATUS_NAME as booking_status,
+        COALESCE(b.service_status, 'waiting') as service_status,
         b.USER_ID,
         COALESCE(u.NAME, 'Guest') as client_name,
         u.EMAIL_ADDRESS as client_email,
@@ -198,6 +199,15 @@ const bookingRepository = {
     `;
     const results = await promisifyQuery(sql, [staff_id]);
     return results;
+  },
+
+  // Update service status (client arrival and completion tracking)
+  updateServiceStatus: async (booking_id, service_status) => {
+    const sql = 'UPDATE bookings SET service_status = ? WHERE BOOKING_ID = ?';
+    console.log('Updating service_status:', { booking_id, service_status });
+    const result = await promisifyQuery(sql, [service_status, booking_id]);
+    console.log('Update result:', result);
+    return result;
   }
 };
 

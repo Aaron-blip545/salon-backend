@@ -61,7 +61,7 @@
     const recentBookings = appointments.slice(0, 10);
     
     if (recentBookings.length === 0) {
-      tableBody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:2rem;color:#6b7280;">No recent bookings</td></tr>';
+      tableBody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:2rem;color:var(--muted);">No recent bookings</td></tr>';
       return;
     }
     
@@ -74,6 +74,26 @@
             : capitalizeFirst(String(appt.paymentMethod).toLowerCase()))
         : '—';
       
+      // Service status badge
+      const serviceStatus = appt.serviceStatus || appt.service_status || 'waiting';
+      let serviceStatusBadge = '';
+      switch(serviceStatus) {
+        case 'waiting':
+          serviceStatusBadge = '<span class="service-badge waiting">⏱️ Waiting</span>';
+          break;
+        case 'arrived':
+          serviceStatusBadge = '<span class="service-badge arrived">👤 Arrived</span>';
+          break;
+        case 'in-progress':
+          serviceStatusBadge = '<span class="service-badge in-progress">🔄 In Progress</span>';
+          break;
+        case 'completed':
+          serviceStatusBadge = '<span class="service-badge completed">✅ Completed</span>';
+          break;
+        default:
+          serviceStatusBadge = '<span class="service-badge waiting">⏱️ Waiting</span>';
+      }
+      
       return `
         <tr>
           <td>${escapeHtml(appt.client)}</td>
@@ -82,6 +102,7 @@
           <td>${escapeHtml(formatTime(appt.time))}</td>
           <td>${escapeHtml(appt.staff)}</td>
           <td><span class="badge badge-${statusClass}">${statusText}</span></td>
+          <td>${serviceStatusBadge}</td>
           <td><span class="badge badge-${paymentMethodLabel.toLowerCase().replace(' ', '-')}">${paymentMethodLabel}</span></td>
         </tr>
       `;
@@ -119,11 +140,13 @@
         if (paymentMethodRaw === 'cash') {
           paymentProofHtml = '<span class="muted" style="font-size:12px;">Not required</span>';
         } else if (appt.paymentMethod && paymentMethodRaw !== 'cash' && appt.receiptImage) {
+          const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+          const borderColor = isDark ? 'rgba(255,255,255,0.1)' : '#e5e7eb';
           paymentProofHtml = `
             <a href="${appt.receiptImage}" target="_blank">
               <img src="${appt.receiptImage}"
                    alt="Receipt"
-                   style="width:48px;height:48px;object-fit:cover;border-radius:4px;border:1px solid #e5e7eb;" />
+                   style="width:48px;height:48px;object-fit:cover;border-radius:4px;border:1px solid ${borderColor};" />
             </a>`;
         }
         
@@ -132,6 +155,33 @@
         const isCanceled = appt.status === 'canceled';
         const showActions = !isConfirmed && !isCanceled;
         
+        // Service completion status
+        const serviceStatus = appt.serviceStatus || appt.service_status || 'waiting'; // waiting, arrived, in-progress, completed
+        let serviceStatusBadge = '';
+        let serviceStatusActions = '';
+        
+        switch(serviceStatus) {
+          case 'waiting':
+            serviceStatusBadge = '<span class="service-badge waiting">⏱️ Waiting</span>';
+            if (isConfirmed && !isCanceled) {
+              serviceStatusActions = `<button class="status-action-btn arrived-btn" onclick="markAsArrived(${appt.id})">✓ Mark Arrived</button>`;
+            }
+            break;
+          case 'arrived':
+            serviceStatusBadge = '<span class="service-badge arrived">👤 Client Arrived</span>';
+            serviceStatusActions = `<button class="status-action-btn complete-btn" onclick="markAsCompleted(${appt.id})">✓ Mark Completed</button>`;
+            break;
+          case 'in-progress':
+            serviceStatusBadge = '<span class="service-badge in-progress">🔄 In Progress</span>';
+            serviceStatusActions = `<button class="status-action-btn complete-btn" onclick="markAsCompleted(${appt.id})">✓ Mark Completed</button>`;
+            break;
+          case 'completed':
+            serviceStatusBadge = '<span class="service-badge completed">✅ Completed</span>';
+            break;
+          default:
+            serviceStatusBadge = '<span class="service-badge waiting">⏱️ Waiting</span>';
+        }
+        
         tr.innerHTML = `
           <td>${escapeHtml(appt.client)}</td>
           <td>${escapeHtml(appt.service)}</td>
@@ -139,13 +189,14 @@
           <td>${escapeHtml(formatTime(appt.time))}</td>
           <td>${escapeHtml(appt.staff || '—')}</td>
           <td><span class="badge ${statusClass}">${statusText}</span></td>
+          <td>${serviceStatusBadge}</td>
           <td>${escapeHtml(paymentMethodLabel)}</td>
           <td>${paymentProofHtml}</td>
           <td>
-            ${showActions ? `
+            ${serviceStatusActions || (showActions ? `
               <button class="action-btn confirm" data-id="${appt.id}">Confirm</button>
               <button class="action-btn cancel" data-id="${appt.id}">Cancel</button>
-            ` : '-'}
+            ` : '—')}
           </td>
         `;
         appointmentsTableBody.appendChild(tr);
@@ -170,11 +221,449 @@
   function updateSummaryStats(){
     totalBookingsEl.textContent = appointments ? appointments.length : 0;
     const revenueValue = appointments && appointments.length ? 
-      appointments.filter(a=>a.status==='confirmed').reduce((s,a)=>s+(parseFloat(a.price)||0),0) : 0;
+      appointments.filter(a=>a.status==='confirmed' || a.status==='completed').reduce((s,a)=>s+(parseFloat(a.price)||0),0) : 0;
     revenueEl.textContent = formatCurrency(revenueValue);
-    activeClientsEl.textContent = appointments && appointments.length ? new Set(appointments.map(a=>a.client)).size : 0;
-    newClientsEl.textContent = 0; // placeholder - could calculate from booking dates
+    
+    // Calculate client statistics
+    if (appointments && appointments.length > 0) {
+      // Active clients (unique clients with bookings)
+      const uniqueClients = new Set(appointments.map(a => a.client));
+      activeClientsEl.textContent = uniqueClients.size;
+      
+      // Get current date boundaries
+      const now = new Date();
+      const startOfWeek = new Date(now);
+      startOfWeek.setDate(now.getDate() - now.getDay()); // Sunday
+      startOfWeek.setHours(0, 0, 0, 0);
+      
+      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+      
+      // Track first booking date for each client
+      const clientFirstBooking = {};
+      appointments.forEach(appt => {
+        const clientName = appt.client;
+        const bookingDate = new Date(appt.date);
+        
+        if (!clientFirstBooking[clientName] || bookingDate < clientFirstBooking[clientName]) {
+          clientFirstBooking[clientName] = bookingDate;
+        }
+      });
+      
+      // New clients this week
+      const newThisWeek = Object.values(clientFirstBooking).filter(date => date >= startOfWeek).length;
+      document.getElementById('newClientsWeek').textContent = newThisWeek;
+      
+      // New clients this month
+      const newThisMonth = Object.values(clientFirstBooking).filter(date => date >= startOfMonth).length;
+      newClientsEl.textContent = newThisMonth;
+      
+      // Returning clients (clients with more than 1 booking)
+      const clientBookingCounts = {};
+      appointments.forEach(appt => {
+        clientBookingCounts[appt.client] = (clientBookingCounts[appt.client] || 0) + 1;
+      });
+      const returningCount = Object.values(clientBookingCounts).filter(count => count > 1).length;
+      document.getElementById('returningClients').textContent = returningCount;
+      
+      // Update top clients list
+      updateTopClients(clientBookingCounts);
+      updateTopStaff(); // Add staff ranking
+    } else {
+      activeClientsEl.textContent = 0;
+      document.getElementById('newClientsWeek').textContent = 0;
+      newClientsEl.textContent = 0;
+      document.getElementById('returningClients').textContent = 0;
+      updateTopClients({});
+      updateTopStaff();
+    }
   }
+
+  function updateTopClients(clientBookingCounts) {
+    const topClientsList = document.getElementById('topClientsList');
+    if (!topClientsList) return;
+    
+    // Calculate total revenue per client
+    const clientRevenue = {};
+    const clientData = {};
+    
+    appointments.forEach(appt => {
+      const clientName = appt.client;
+      
+      // Count visits
+      if (!clientData[clientName]) {
+        clientData[clientName] = { visits: 0, revenue: 0 };
+      }
+      clientData[clientName].visits++;
+      
+      // Calculate revenue (only for confirmed/completed bookings)
+      if (appt.status === 'confirmed' || appt.status === 'completed') {
+        const revenue = parseFloat(appt.price) || 0;
+        clientData[clientName].revenue += revenue;
+      }
+    });
+    
+    // Convert to array and sort by revenue (not visits)
+    const sortedClients = Object.entries(clientData)
+      .sort((a, b) => b[1].revenue - a[1].revenue)
+      .slice(0, 10); // Top 10 clients
+    
+    if (sortedClients.length === 0) {
+      topClientsList.innerHTML = '<p style="text-align: center; padding: 1rem; color: var(--muted);">No client data available</p>';
+      return;
+    }
+    
+    topClientsList.innerHTML = sortedClients.map(([clientName, data], index) => {
+      const rankColor = index === 0 ? '#f59e0b' : index === 1 ? '#9ca3af' : index === 2 ? '#cd7f32' : 'var(--muted)';
+      const rankIcon = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `${index + 1}.`;
+      
+      const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+      const hoverBg = isDark ? 'rgba(255,255,255,0.05)' : '#f9fafb';
+      const borderColor = isDark ? 'rgba(255,255,255,0.1)' : '#e5e7eb';
+      
+      return `
+        <div style="display: flex; align-items: center; justify-content: space-between; padding: 0.75rem 1rem; border-bottom: 1px solid ${borderColor}; transition: background 0.2s;" 
+             onmouseover="this.style.background='${hoverBg}'" 
+             onmouseout="this.style.background='transparent'">
+          <div style="display: flex; align-items: center; gap: 0.75rem; flex: 1;">
+            <span style="font-size: 1.25rem; color: ${rankColor}; min-width: 30px;">${rankIcon}</span>
+            <div style="flex: 1;">
+              <div style="font-weight: 600; color: var(--text); font-size: 0.875rem;">${escapeHtml(clientName)}</div>
+              <div style="font-size: 0.75rem; color: var(--muted);">${data.visits} visit${data.visits > 1 ? 's' : ''}</div>
+            </div>
+          </div>
+          <div style="text-align: right;">
+            <div style="font-weight: 600; color: var(--success); font-size: 0.875rem;">₱${data.revenue.toFixed(2)}</div>
+            <div style="font-size: 0.7rem; color: var(--muted);">revenue</div>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  function updateTopStaff() {
+    const topStaffList = document.getElementById('topStaffList');
+    if (!topStaffList) return;
+    
+    // Get current month's start and end dates
+    const now = new Date();
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+    
+    // Count bookings per staff member for this month
+    const staffBookings = {};
+    
+    appointments.forEach(appt => {
+      const bookingDate = new Date(appt.date);
+      
+      // Only count bookings from this month
+      if (bookingDate >= monthStart && bookingDate <= monthEnd) {
+        const staffName = appt.staff || appt.STAFF_NAME || 'Unassigned';
+        
+        // Skip unassigned bookings
+        if (staffName === 'Unassigned' || !staffName) return;
+        
+        staffBookings[staffName] = (staffBookings[staffName] || 0) + 1;
+      }
+    });
+    
+    // Convert to array and sort by booking count
+    const sortedStaff = Object.entries(staffBookings)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5); // Top 5 staff
+    
+    if (sortedStaff.length === 0) {
+      topStaffList.innerHTML = '<p style="text-align: center; padding: 1rem; color: var(--muted);">No staff booking data for this month</p>';
+      return;
+    }
+    
+    // Find max bookings for progress bar calculation
+    const maxBookings = sortedStaff[0][1];
+    
+    topStaffList.innerHTML = sortedStaff.map(([staffName, bookingCount], index) => {
+      const rankIcon = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : (index + 1);
+      const rankClass = index < 3 ? 'medal' : 'number';
+      const initial = staffName.charAt(0).toUpperCase();
+      const progressPercent = (bookingCount / maxBookings) * 100;
+      
+      return `
+        <div class="staff-item">
+          <div class="staff-rank ${rankClass}">${rankIcon}</div>
+          <div class="staff-avatar">${initial}</div>
+          <div class="staff-info">
+            <p class="staff-name">${escapeHtml(staffName)}</p>
+            <p class="staff-bookings-text">${bookingCount} booking${bookingCount !== 1 ? 's' : ''}</p>
+          </div>
+          <div class="staff-count">
+            <div class="staff-number">${bookingCount}</div>
+            <div class="staff-label">PICKS</div>
+          </div>
+          <button class="action-btn confirm" onclick="viewStaffActivity('${escapeHtml(staffName).replace(/'/g, "\\'")}')" style="margin-left: 0.5rem;">View Activity</button>
+        </div>
+      `;
+    }).join('');
+  }
+
+  // View staff activity and booking history
+  window.viewStaffActivity = function(staffName) {
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    const modalBg = isDark ? 'var(--panel)' : 'white';
+    const borderColor = isDark ? 'rgba(255,255,255,0.1)' : '#e5e7eb';
+    const tableHeaderBg = isDark ? 'rgba(255,255,255,0.05)' : '#f3f4f6';
+    
+    // Filter bookings for this staff member
+    const staffBookings = appointments.filter(appt => {
+      const apptStaff = appt.staff || appt.STAFF_NAME;
+      return apptStaff === staffName;
+    }).sort((a, b) => new Date(b.date) - new Date(a.date)); // Most recent first
+    
+    // Group bookings by date for daily activity
+    const dailyActivity = {};
+    staffBookings.forEach(booking => {
+      const date = new Date(booking.date).toLocaleDateString();
+      if (!dailyActivity[date]) {
+        dailyActivity[date] = [];
+      }
+      dailyActivity[date].push(booking);
+    });
+    
+    // Calculate stats
+    const totalBookings = staffBookings.length;
+    const completedBookings = staffBookings.filter(b => b.status === 'completed' || b.status === 'confirmed').length;
+    const canceledBookings = staffBookings.filter(b => b.status === 'canceled').length;
+    const upcomingBookings = staffBookings.filter(b => {
+      const bookingDate = new Date(b.date);
+      return bookingDate > new Date() && b.status !== 'canceled';
+    }).length;
+    
+    let bookingsHTML = '';
+    if (staffBookings.length === 0) {
+      bookingsHTML = `<tr><td colspan="5" style="text-align:center;padding:2rem;color:var(--muted);">No bookings found for ${escapeHtml(staffName)}</td></tr>`;
+    } else {
+      bookingsHTML = staffBookings.map(booking => {
+        const bookingDate = new Date(booking.date).toLocaleDateString();
+        const bookingTime = formatTime(booking.time || booking.BOOKING_TIME) || 'N/A';
+        const clientName = booking.client || 'Guest';
+        const serviceName = booking.service || booking.SERVICE_NAME || 'N/A';
+        const status = booking.status || 'pending';
+        const statusColor = status === 'confirmed' || status === 'completed' ? 'var(--success)' : 
+                           status === 'canceled' ? 'var(--danger)' : '#f59e0b';
+        
+        return `
+          <tr style="border-bottom: 1px solid ${borderColor};">
+            <td style="padding: 0.75rem; color: var(--text);">${bookingDate}</td>
+            <td style="padding: 0.75rem; color: var(--text);">${bookingTime}</td>
+            <td style="padding: 0.75rem; color: var(--text);">${escapeHtml(clientName)}</td>
+            <td style="padding: 0.75rem; color: var(--text);">${escapeHtml(serviceName)}</td>
+            <td style="padding: 0.75rem;">
+              <span style="padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.875rem; font-weight: 500; background: ${statusColor}; color: white;">
+                ${escapeHtml(status)}
+              </span>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+    
+    // Create daily activity summary
+    let dailyActivityHTML = '';
+    const sortedDates = Object.keys(dailyActivity).sort((a, b) => new Date(b) - new Date(a));
+    
+    if (sortedDates.length === 0) {
+      dailyActivityHTML = '<p style="text-align:center;padding:1rem;color:var(--muted);">No activity recorded</p>';
+    } else {
+      dailyActivityHTML = sortedDates.slice(0, 10).map(date => {
+        const dayBookings = dailyActivity[date];
+        const dayCount = dayBookings.length;
+        const dayDate = new Date(dayBookings[0].date);
+        const isToday = dayDate.toDateString() === new Date().toDateString();
+        
+        return `
+          <div style="padding: 0.75rem 1rem; border-bottom: 1px solid ${borderColor}; display: flex; justify-content: space-between; align-items: center;">
+            <div>
+              <div style="font-weight: 600; color: var(--text); font-size: 0.9rem;">
+                ${date} ${isToday ? '<span style="color: var(--primary); font-size: 0.75rem;">(Today)</span>' : ''}
+              </div>
+              <div style="font-size: 0.8rem; color: var(--muted);">
+                ${dayBookings.map(b => formatTime(b.time || b.BOOKING_TIME) || 'N/A').join(', ')}
+              </div>
+            </div>
+            <div style="text-align: right;">
+              <div style="font-weight: 700; font-size: 1.25rem; color: var(--primary);">${dayCount}</div>
+              <div style="font-size: 0.7rem; color: var(--muted); text-transform: uppercase;">booking${dayCount !== 1 ? 's' : ''}</div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+    
+    const modalHTML = `
+      <div style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:10000;display:flex;align-items:center;justify-content:center;padding:1rem;" id="staffActivityModal" onclick="if(event.target===this) this.remove()">
+        <div style="background:${modalBg};color:var(--text);border-radius:12px;padding:0;max-width:1000px;width:95%;max-height:90vh;overflow:hidden;box-shadow:var(--shadow);border:1px solid ${borderColor};display:flex;flex-direction:column;">
+          
+          <!-- Header -->
+          <div style="padding:1.5rem;border-bottom:2px solid ${borderColor};display:flex;justify-content:space-between;align-items:center;background:linear-gradient(135deg, rgba(102, 126, 234, 0.05), rgba(118, 75, 162, 0.05));">
+            <div>
+              <h2 style="margin:0;color:var(--text);font-size:1.5rem;">${escapeHtml(staffName)}'s Activity</h2>
+              <p style="margin:0.5rem 0 0 0;color:var(--muted);font-size:0.875rem;">Complete booking history and daily schedule</p>
+            </div>
+            <button onclick="document.getElementById('staffActivityModal').remove()" style="background:transparent;border:none;font-size:1.5rem;cursor:pointer;color:var(--muted);padding:0.5rem;line-height:1;">✕</button>
+          </div>
+          
+          <!-- Stats Cards -->
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;padding:1.5rem;background:${isDark ? 'rgba(255,255,255,0.02)' : '#f9fafb'};">
+            <div style="text-align:center;padding:1rem;background:${modalBg};border-radius:8px;border:1px solid ${borderColor};">
+              <div style="font-size:1.75rem;font-weight:700;color:var(--primary);">${totalBookings}</div>
+              <div style="font-size:0.75rem;color:var(--muted);text-transform:uppercase;margin-top:0.25rem;">Total Bookings</div>
+            </div>
+            <div style="text-align:center;padding:1rem;background:${modalBg};border-radius:8px;border:1px solid ${borderColor};">
+              <div style="font-size:1.75rem;font-weight:700;color:var(--success);">${completedBookings}</div>
+              <div style="font-size:0.75rem;color:var(--muted);text-transform:uppercase;margin-top:0.25rem;">Completed</div>
+            </div>
+            <div style="text-align:center;padding:1rem;background:${modalBg};border-radius:8px;border:1px solid ${borderColor};">
+              <div style="font-size:1.75rem;font-weight:700;color:#f59e0b;">${upcomingBookings}</div>
+              <div style="font-size:0.75rem;color:var(--muted);text-transform:uppercase;margin-top:0.25rem;">Upcoming</div>
+            </div>
+            <div style="text-align:center;padding:1rem;background:${modalBg};border-radius:8px;border:1px solid ${borderColor};">
+              <div style="font-size:1.75rem;font-weight:700;color:var(--danger);">${canceledBookings}</div>
+              <div style="font-size:0.75rem;color:var(--muted);text-transform:uppercase;margin-top:0.25rem;">Canceled</div>
+            </div>
+          </div>
+          
+          <!-- Content Tabs -->
+          <div style="flex:1;overflow:auto;padding:1.5rem;">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;">
+              
+              <!-- Daily Activity -->
+              <div>
+                <h3 style="margin:0 0 1rem 0;color:var(--text);font-size:1.125rem;display:flex;align-items:center;gap:0.5rem;">
+                  📅 Daily Activity
+                </h3>
+                <div style="border:1px solid ${borderColor};border-radius:8px;overflow:hidden;max-height:400px;overflow-y:auto;">
+                  ${dailyActivityHTML}
+                </div>
+              </div>
+              
+              <!-- All Bookings -->
+              <div>
+                <h3 style="margin:0 0 1rem 0;color:var(--text);font-size:1.125rem;display:flex;align-items:center;gap:0.5rem;">
+                  📋 All Bookings (${totalBookings})
+                </h3>
+                <div style="border:1px solid ${borderColor};border-radius:8px;overflow:hidden;max-height:400px;overflow-y:auto;">
+                  <table style="width:100%;border-collapse:collapse;">
+                    <thead>
+                      <tr style="background:${tableHeaderBg};position:sticky;top:0;">
+                        <th style="padding:0.75rem;text-align:left;font-size:0.8rem;font-weight:600;color:var(--muted);">Date</th>
+                        <th style="padding:0.75rem;text-align:left;font-size:0.8rem;font-weight:600;color:var(--muted);">Time</th>
+                        <th style="padding:0.75rem;text-align:left;font-size:0.8rem;font-weight:600;color:var(--muted);">Client</th>
+                        <th style="padding:0.75rem;text-align:left;font-size:0.8rem;font-weight:600;color:var(--muted);">Service</th>
+                        <th style="padding:0.75rem;text-align:left;font-size:0.8rem;font-weight:600;color:var(--muted);">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      ${bookingsHTML}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+              
+            </div>
+          </div>
+          
+          <!-- Footer -->
+          <div style="padding:1rem 1.5rem;border-top:1px solid ${borderColor};display:flex;justify-content:flex-end;gap:0.5rem;">
+            <button onclick="document.getElementById('staffActivityModal').remove()" class="action-btn confirm">Close</button>
+          </div>
+          
+        </div>
+      </div>
+    `;
+    
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+  };
+
+  // Service Completion Status Functions
+  window.markAsArrived = async function(bookingId) {
+    try {
+      const appt = appointments.find(a => a.id === bookingId);
+      if (!appt) {
+        showNotification('Booking not found', 'error');
+        return;
+      }
+      
+      console.log('Before update:', { id: bookingId, serviceStatus: appt.serviceStatus });
+      
+      // Persist to database first
+      const response = await fetch(`http://localhost:3000/api/bookings/${bookingId}/service-status`, {
+        method: 'PATCH',
+        headers: { 'Authorization': 'Bearer ' + getAuthToken(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ service_status: 'arrived' })
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('API Error:', errorData);
+        throw new Error(errorData.message || 'Failed to update status');
+      }
+      
+      const result = await response.json();
+      console.log('API Response:', result);
+      
+      // Update local state only after successful database update
+      appt.serviceStatus = 'arrived';
+      appt.service_status = 'arrived'; // Update both for consistency
+      console.log('After update:', { id: bookingId, serviceStatus: appt.serviceStatus });
+      
+      renderAppointments();
+      showNotification(`✓ ${appt.client} marked as arrived`, 'success');
+      
+    } catch (error) {
+      console.error('Error marking as arrived:', error);
+      showNotification('Failed to update status', 'error');
+    }
+  };
+
+  window.markAsCompleted = async function(bookingId) {
+    try {
+      const appt = appointments.find(a => a.id === bookingId);
+      if (!appt) {
+        showNotification('Booking not found', 'error');
+        return;
+      }
+      
+      if (!confirm(`Mark service as completed for ${appt.client}?`)) {
+        return;
+      }
+      
+      // Persist to database first
+      const response = await fetch(`http://localhost:3000/api/bookings/${bookingId}/service-status`, {
+        method: 'PATCH',
+        headers: { 'Authorization': 'Bearer ' + getAuthToken(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ service_status: 'completed' })
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to update status');
+      }
+      
+      // Update local state after successful database update
+      appt.serviceStatus = 'completed';
+      appt.service_status = 'completed';
+      appt.status = 'completed'; // Also update booking status
+      
+      // Update UI
+      renderAppointments();
+      updateChart();
+      updateSummaryStats();
+      updateTopStaff();
+      
+      showNotification(`✅ Service completed for ${appt.client}`, 'success');
+      
+    } catch (error) {
+      console.error('Error marking as completed:', error);
+      showNotification('Failed to update status', 'error');
+    }
+  };
 
   async function onConfirm(e){
     const id = Number(e.currentTarget.dataset.id);
@@ -370,27 +859,35 @@
       
       if(!response.ok) throw new Error('Failed to fetch bookings');
       
-      const data = await response.json();
-      const payload = Array.isArray(data) ? data : (data && data.data ? data.data : []);
+      const result = await response.json();
+      const payload = Array.isArray(result) ? result : (result && result.data ? result.data : []);
       
       if(Array.isArray(payload)){
-        appointments = payload.map((b)=>({
-          id: b.BOOKING_ID || b.id,
-          client: b.client_name || b.CLIENT_NAME || b.USERNAME || 'Client',
-          service: b.SERVICE_NAME || b.service || 'Service',
-          date: b.BOOKING_DATE || b.booking_date || b.date || '',
-          time: b.BOOKING_TIME || b.booking_time || b.time || '',
-          staff: b.staff_name || b.STAFF_NAME || '',
-          status: normalizeStatus(b.booking_status || b.STATUS || b.status || b.status_name || 'pending'),
-          price: parseFloat(b.service_price || b.PRICE || b.price || 0),
-          paymentStatus: (b.PAYMENT_STATUS || b.payment_status || 'pending').toLowerCase(),
-          paymentMethod: b.PAYMENT_METHOD || b.payment_method || null,
-          receiptImage: b.RECEIPT_IMAGE || b.receipt_image || null
-        }));
+        appointments = payload.map((b)=>{
+          const mapped = {
+            id: b.BOOKING_ID || b.id,
+            client: b.client_name || b.CLIENT_NAME || b.USERNAME || 'Client',
+            service: b.SERVICE_NAME || b.service || 'Service',
+            date: b.BOOKING_DATE || b.booking_date || b.date || '',
+            time: b.BOOKING_TIME || b.booking_time || b.time || '',
+            staff: b.staff_name || b.STAFF_NAME || '',
+            status: normalizeStatus(b.booking_status || b.STATUS || b.status || b.status_name || 'pending'),
+            serviceStatus: b.service_status || 'waiting',
+            price: parseFloat(b.service_price || b.PRICE || b.price || 0),
+            paymentStatus: (b.PAYMENT_STATUS || b.payment_status || 'pending').toLowerCase(),
+            paymentMethod: b.PAYMENT_METHOD || b.payment_method || null,
+            receiptImage: b.RECEIPT_IMAGE || b.receipt_image || null
+          };
+          return mapped;
+        });
+        
+        console.log('Loaded bookings:', appointments.length, 'Sample:', appointments[0]);
+        console.log('All booking dates:', appointments.map(a => ({ id: a.id, date: a.date, type: typeof a.date })));
         
         renderAppointments();
         updateChart();
         updateSummaryCards();
+        updateSummaryStats();
         loadDashboardSection(); // Load dashboard recent bookings
       }
     } catch(err) {
@@ -913,14 +1410,19 @@
     });
 
     const preview = document.getElementById('reportPreview');
-    let html = '<h3>Revenue by Service</h3><table style="width:100%; border-collapse: collapse;"><tr style="background: #f3f4f6;"><th style="padding:10px; text-align:left;">Service</th><th style="padding:10px; text-align:right;">Revenue</th></tr>';
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    const headerBg = isDark ? 'rgba(255,255,255,0.05)' : '#f3f4f6';
+    const rowBorder = isDark ? 'rgba(255,255,255,0.1)' : '#e5e7eb';
+    const totalBg = isDark ? 'rgba(255,255,255,0.03)' : '#f9fafb';
+    
+    let html = `<h3>Revenue by Service</h3><table style="width:100%; border-collapse: collapse;"><tr style="background: ${headerBg};"><th style="padding:10px; text-align:left;">Service</th><th style="padding:10px; text-align:right;">Revenue</th></tr>`;
     
     Object.entries(revenueByService).forEach(([service, revenue]) => {
-      html += `<tr style="border-bottom: 1px solid #e5e7eb;"><td style="padding:10px;">${service}</td><td style="padding:10px; text-align:right;">${formatCurrency(revenue)}</td></tr>`;
+      html += `<tr style="border-bottom: 1px solid ${rowBorder};"><td style="padding:10px;">${service}</td><td style="padding:10px; text-align:right;">${formatCurrency(revenue)}</td></tr>`;
     });
     
     const total = Object.values(revenueByService).reduce((a,b) => a+b, 0);
-    html += `<tr style="font-weight:bold; background:#f9fafb;"><td style="padding:10px;">TOTAL</td><td style="padding:10px; text-align:right;">${formatCurrency(total)}</td></tr></table>`;
+    html += `<tr style="font-weight:bold; background:${totalBg};"><td style="padding:10px;">TOTAL</td><td style="padding:10px; text-align:right;">${formatCurrency(total)}</td></tr></table>`;
     
     preview.innerHTML = html;
     showNotification('Revenue report generated', 'success');
@@ -972,13 +1474,45 @@
 
   // Summary cards calculation
   function updateSummaryCards() {
-    if (!appointments || appointments.length === 0) return;
+    console.log('updateSummaryCards called, appointments:', appointments.length);
+    if (!appointments || appointments.length === 0) {
+      console.log('No appointments, setting cards to 0');
+      const todayBookingsEl = document.getElementById('todayBookings');
+      const pendingBookingsEl = document.getElementById('pendingBookings');
+      const completedTodayEl = document.getElementById('completedToday');
+      const revenueTodayEl = document.getElementById('revenueToday');
+      if (todayBookingsEl) todayBookingsEl.textContent = '0';
+      if (pendingBookingsEl) pendingBookingsEl.textContent = '0';
+      if (completedTodayEl) completedTodayEl.textContent = '0';
+      if (revenueTodayEl) revenueTodayEl.textContent = '₱0';
+      return;
+    }
     
-    const today = new Date().toISOString().split('T')[0];
-    const todayBookings = appointments.filter(a => a.date === today);
+    // Get today's date in local timezone (not UTC)
+    const today = new Date();
+    const localToday = new Date(today.getTime() - (today.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
+    
+    const todayBookings = appointments.filter(a => {
+      // Convert UTC date to local date for comparison
+      const utcDate = new Date(a.date);
+      const localDate = new Date(utcDate.getTime() - (utcDate.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
+      return localDate === localToday;
+    });
+    
+    console.log('Filtering today bookings. Local Today:', localToday);
+    todayBookings.forEach(b => console.log('Today booking:', b.id, 'Date:', b.date, 'Status:', b.status, 'ServiceStatus:', b.serviceStatus, b.service_status, 'Price:', b.price));
+    
     const pendingBookings = appointments.filter(a => a.status === 'pending');
-    const completedToday = todayBookings.filter(a => a.status === 'completed');
-    const revenueToday = completedToday.reduce((sum, a) => sum + (parseFloat(a.price) || 0), 0);
+    const completedToday = todayBookings.filter(a => {
+      const sStatus = a.serviceStatus || a.service_status || 'waiting';
+      return sStatus === 'completed';
+    });
+    const revenueToday = todayBookings.filter(a => {
+      const sStatus = a.serviceStatus || a.service_status || 'waiting';
+      return sStatus === 'completed' || a.status === 'confirmed';
+    }).reduce((sum, a) => sum + (parseFloat(a.price) || 0), 0);
+    
+    console.log('Today:', localToday, 'Today bookings:', todayBookings.length, 'Completed:', completedToday.length, 'Revenue:', revenueToday);
 
     const todayBookingsEl = document.getElementById('todayBookings');
     const pendingBookingsEl = document.getElementById('pendingBookings');
@@ -1131,7 +1665,7 @@
       tbody.innerHTML = '';
       
       if (clients.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:2rem;color:#6b7280;">No clients found. Clients will appear here after they register.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:2rem;color:var(--muted);">No clients found. Clients will appear here after they register.</td></tr>';
         showNotification('No clients found', 'info');
         return;
       }
@@ -1157,7 +1691,7 @@
       showNotification(`Loaded ${clients.length} client(s)`, 'success');
     } catch (err) {
       console.error('Failed to load clients:', err);
-      tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:2rem;color:#ef4444;">Error: ${err.message}<br><small>Check console for details</small></td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:2rem;color:var(--danger);">Error: ${err.message}<br><small>Check console for details</small></td></tr>`;
       showNotification('Failed to load clients: ' + err.message, 'error');
     }
   }
@@ -1204,7 +1738,7 @@
       tbody.innerHTML = '';
       
       if (staff.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:2rem;color:#6b7280;">No staff members found. Add staff members to manage your team.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:2rem;color:var(--muted);">No staff members found. Add staff members to manage your team.</td></tr>';
         showNotification('No staff members found', 'info');
         return;
       }
@@ -1230,9 +1764,10 @@
           <td>${escapeHtml(member.phone || member.PHONE || 'N/A')}</td>
           <td>${escapeHtml(member.role || member.ROLE || 'Staff')}</td>
           <td>
-            ${assignedCount > 0 ? `<a href="#" onclick="viewStaffClients(${staffId}, '${escapeHtml(staffName)}'); return false;" style="color: #3b82f6; text-decoration: underline; cursor: pointer;">${assignedCount}</a>` : assignedCount}
+            ${assignedCount > 0 ? `<a href="#" onclick="viewStaffClients(${staffId}, '${escapeHtml(staffName)}'); return false;" style="color: var(--primary); text-decoration: underline; cursor: pointer;">${assignedCount}</a>` : assignedCount}
           </td>
           <td>
+            <button class="action-btn confirm" onclick="viewStaffActivity('${escapeHtml(staffName).replace(/'/g, "\\'")}')">View Activity</button>
             <button class="action-btn warning" onclick="editStaff(${staffId})">Edit</button>
             <button class="action-btn danger" onclick="deleteStaff(${staffId})">Delete</button>
           </td>
@@ -1243,7 +1778,7 @@
       showNotification(`Loaded ${staff.length} staff member(s)`, 'success');
     } catch (err) {
       console.error('Failed to load staff:', err);
-      tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:2rem;color:#ef4444;">Error: ${err.message}<br><small>Check console for details</small></td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:2rem;color:var(--danger);">Error: ${err.message}<br><small>Check console for details</small></td></tr>`;
       showNotification('Failed to load staff: ' + err.message, 'error');
     }
   }
@@ -1377,65 +1912,69 @@
               <td>${formatCurrency(b.price)}</td>
             </tr>
           `).join('')
-        : '<tr><td colspan="5" style="text-align:center;color:#6b7280;">No bookings yet</td></tr>';
+        : '<tr><td colspan="5" style="text-align:center;color:var(--muted);">No bookings yet</td></tr>';
       
       const totalSpent = clientBookings
         .filter(b => b.status === 'confirmed')
         .reduce((sum, b) => sum + parseFloat(b.price || 0), 0);
       
+      const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+      const infoBg = isDark ? 'rgba(255,255,255,0.03)' : '#f9fafb';
+      const tableHeaderBg = isDark ? 'rgba(255,255,255,0.05)' : '#f3f4f6';
+      
       const modalHTML = `
         <div style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:10000;display:flex;align-items:center;justify-content:center;" id="clientModal">
-          <div style="background:white;border-radius:12px;padding:2rem;max-width:800px;width:90%;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
+          <div style="background:var(--panel);color:var(--text);border-radius:12px;padding:2rem;max-width:800px;width:90%;max-height:90vh;overflow-y:auto;box-shadow:var(--shadow);border:1px solid rgba(15,23,42,0.1);">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;">
-              <h2 style="margin:0;">Client Profile</h2>
-              <button onclick="document.getElementById('clientModal').remove()" style="background:transparent;border:none;font-size:1.5rem;cursor:pointer;color:#6b7280;">✕</button>
+              <h2 style="margin:0;color:var(--text);">Client Profile</h2>
+              <button onclick="document.getElementById('clientModal').remove()" style="background:transparent;border:none;font-size:1.5rem;cursor:pointer;color:var(--muted);">✕</button>
             </div>
             
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:2rem;padding:1rem;background:#f9fafb;border-radius:8px;">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:2rem;padding:1rem;background:${infoBg};border-radius:8px;">
               <div>
-                <p style="margin:0;font-size:0.875rem;color:#6b7280;">Full Name</p>
-                <p style="margin:0.25rem 0 0 0;font-weight:600;">${escapeHtml(client.NAME || client.name || 'N/A')}</p>
+                <p style="margin:0;font-size:0.875rem;color:var(--muted);">Full Name</p>
+                <p style="margin:0.25rem 0 0 0;font-weight:600;color:var(--text);">${escapeHtml(client.NAME || client.name || 'N/A')}</p>
               </div>
               <div>
-                <p style="margin:0;font-size:0.875rem;color:#6b7280;">Email</p>
-                <p style="margin:0.25rem 0 0 0;font-weight:600;">${escapeHtml(client.EMAIL_ADDRESS || client.EMAIL || client.email || 'N/A')}</p>
+                <p style="margin:0;font-size:0.875rem;color:var(--muted);">Email</p>
+                <p style="margin:0.25rem 0 0 0;font-weight:600;color:var(--text);">${escapeHtml(client.EMAIL_ADDRESS || client.EMAIL || client.email || 'N/A')}</p>
               </div>
               <div>
-                <p style="margin:0;font-size:0.875rem;color:#6b7280;">Phone</p>
-                <p style="margin:0.25rem 0 0 0;font-weight:600;">${escapeHtml(client.PHONE || client.phone || 'N/A')}</p>
+                <p style="margin:0;font-size:0.875rem;color:var(--muted);">Phone</p>
+                <p style="margin:0.25rem 0 0 0;font-weight:600;color:var(--text);">${escapeHtml(client.PHONE || client.phone || 'N/A')}</p>
               </div>
               <div>
-                <p style="margin:0;font-size:0.875rem;color:#6b7280;">Gender</p>
-                <p style="margin:0.25rem 0 0 0;font-weight:600;">${escapeHtml(client.GENDER || client.gender || 'N/A')}</p>
+                <p style="margin:0;font-size:0.875rem;color:var(--muted);">Gender</p>
+                <p style="margin:0.25rem 0 0 0;font-weight:600;color:var(--text);">${escapeHtml(client.GENDER || client.gender || 'N/A')}</p>
               </div>
               <div>
-                <p style="margin:0;font-size:0.875rem;color:#6b7280;">Total Bookings</p>
-                <p style="margin:0.25rem 0 0 0;font-weight:600;color:#667eea;">${clientBookings.length}</p>
+                <p style="margin:0;font-size:0.875rem;color:var(--muted);">Total Bookings</p>
+                <p style="margin:0.25rem 0 0 0;font-weight:600;color:var(--primary);">${clientBookings.length}</p>
               </div>
               <div>
-                <p style="margin:0;font-size:0.875rem;color:#6b7280;">Total Spent</p>
-                <p style="margin:0.25rem 0 0 0;font-weight:600;color:#10b981;">${formatCurrency(totalSpent)}</p>
+                <p style="margin:0;font-size:0.875rem;color:var(--muted);">Total Spent</p>
+                <p style="margin:0.25rem 0 0 0;font-weight:600;color:var(--success);">${formatCurrency(totalSpent)}</p>
               </div>
               <div>
-                <p style="margin:0;font-size:0.875rem;color:#6b7280;">Member Since</p>
-                <p style="margin:0.25rem 0 0 0;font-weight:600;">${formatDate(client.CREATED_AT || client.created_at || '')}</p>
+                <p style="margin:0;font-size:0.875rem;color:var(--muted);">Member Since</p>
+                <p style="margin:0.25rem 0 0 0;font-weight:600;color:var(--text);">${formatDate(client.CREATED_AT || client.created_at || '')}</p>
               </div>
               <div>
-                <p style="margin:0;font-size:0.875rem;color:#6b7280;">Account Status</p>
-                <p style="margin:0.25rem 0 0 0;font-weight:600;color:#10b981;">Active</p>
+                <p style="margin:0;font-size:0.875rem;color:var(--muted);">Account Status</p>
+                <p style="margin:0.25rem 0 0 0;font-weight:600;color:var(--success);">Active</p>
               </div>
             </div>
             
-            <h3 style="margin:0 0 1rem 0;">Booking History</h3>
+            <h3 style="margin:0 0 1rem 0;color:var(--text);">Booking History</h3>
             <div style="overflow-x:auto;">
               <table style="width:100%;border-collapse:collapse;">
                 <thead>
-                  <tr style="background:#f3f4f6;">
-                    <th style="padding:0.75rem;text-align:left;font-size:0.875rem;font-weight:600;color:#6b7280;">Service</th>
-                    <th style="padding:0.75rem;text-align:left;font-size:0.875rem;font-weight:600;color:#6b7280;">Date</th>
-                    <th style="padding:0.75rem;text-align:left;font-size:0.875rem;font-weight:600;color:#6b7280;">Time</th>
-                    <th style="padding:0.75rem;text-align:left;font-size:0.875rem;font-weight:600;color:#6b7280;">Status</th>
-                    <th style="padding:0.75rem;text-align:right;font-size:0.875rem;font-weight:600;color:#6b7280;">Amount</th>
+                  <tr style="background:${tableHeaderBg};">
+                    <th style="padding:0.75rem;text-align:left;font-size:0.875rem;font-weight:600;color:var(--muted);">Service</th>
+                    <th style="padding:0.75rem;text-align:left;font-size:0.875rem;font-weight:600;color:var(--muted);">Date</th>
+                    <th style="padding:0.75rem;text-align:left;font-size:0.875rem;font-weight:600;color:var(--muted);">Time</th>
+                    <th style="padding:0.75rem;text-align:left;font-size:0.875rem;font-weight:600;color:var(--muted);">Status</th>
+                    <th style="padding:0.75rem;text-align:right;font-size:0.875rem;font-weight:600;color:var(--muted);">Amount</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1473,38 +2012,40 @@
       const staff = result.data;
       
       // Create edit modal
+      const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+      
       const modalHTML = `
         <div style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:10000;display:flex;align-items:center;justify-content:center;" id="editStaffModal">
-          <div style="background:white;border-radius:12px;padding:2rem;max-width:500px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
+          <div style="background:var(--panel);color:var(--text);border-radius:12px;padding:2rem;max-width:500px;width:90%;box-shadow:var(--shadow);border:1px solid rgba(15,23,42,0.1);">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;">
-              <h2 style="margin:0;">Edit Staff Member</h2>
-              <button onclick="document.getElementById('editStaffModal').remove()" style="background:transparent;border:none;font-size:1.5rem;cursor:pointer;color:#6b7280;">✕</button>
+              <h2 style="margin:0;color:var(--text);">Edit Staff Member</h2>
+              <button onclick="document.getElementById('editStaffModal').remove()" style="background:transparent;border:none;font-size:1.5rem;cursor:pointer;color:var(--muted);">✕</button>
             </div>
             
             <form id="editStaffForm" style="display:flex;flex-direction:column;gap:1rem;">
               <div>
-                <label style="display:block;margin-bottom:0.5rem;font-weight:600;color:#374151;">Full Name *</label>
-                <input type="text" id="editFullName" value="${escapeHtml(staff.full_name)}" required style="width:100%;padding:0.75rem;border:1px solid #d1d5db;border-radius:6px;font-size:1rem;">
+                <label style="display:block;margin-bottom:0.5rem;font-weight:600;color:var(--text);">Full Name *</label>
+                <input type="text" id="editFullName" value="${escapeHtml(staff.full_name)}" required style="width:100%;padding:0.75rem;border:1px solid ${isDark ? 'rgba(255,255,255,0.1)' : '#d1d5db'};border-radius:6px;font-size:1rem;background:var(--bg);color:var(--text);">
               </div>
               
               <div>
-                <label style="display:block;margin-bottom:0.5rem;font-weight:600;color:#374151;">Email *</label>
-                <input type="email" id="editEmail" value="${escapeHtml(staff.email)}" required style="width:100%;padding:0.75rem;border:1px solid #d1d5db;border-radius:6px;font-size:1rem;">
+                <label style="display:block;margin-bottom:0.5rem;font-weight:600;color:var(--text);">Email *</label>
+                <input type="email" id="editEmail" value="${escapeHtml(staff.email)}" required style="width:100%;padding:0.75rem;border:1px solid ${isDark ? 'rgba(255,255,255,0.1)' : '#d1d5db'};border-radius:6px;font-size:1rem;background:var(--bg);color:var(--text);">
               </div>
               
               <div>
-                <label style="display:block;margin-bottom:0.5rem;font-weight:600;color:#374151;">Phone</label>
-                <input type="tel" id="editPhone" value="${escapeHtml(staff.phone || '')}" style="width:100%;padding:0.75rem;border:1px solid #d1d5db;border-radius:6px;font-size:1rem;">
+                <label style="display:block;margin-bottom:0.5rem;font-weight:600;color:var(--text);">Phone</label>
+                <input type="tel" id="editPhone" value="${escapeHtml(staff.phone || '')}" style="width:100%;padding:0.75rem;border:1px solid ${isDark ? 'rgba(255,255,255,0.1)' : '#d1d5db'};border-radius:6px;font-size:1rem;background:var(--bg);color:var(--text);">
               </div>
               
               <div>
-                <label style="display:block;margin-bottom:0.5rem;font-weight:600;color:#374151;">Role</label>
-                <input type="text" id="editRole" value="${escapeHtml(staff.role || 'Staff')}" style="width:100%;padding:0.75rem;border:1px solid #d1d5db;border-radius:6px;font-size:1rem;">
+                <label style="display:block;margin-bottom:0.5rem;font-weight:600;color:var(--text);">Role</label>
+                <input type="text" id="editRole" value="${escapeHtml(staff.role || 'Staff')}" style="width:100%;padding:0.75rem;border:1px solid ${isDark ? 'rgba(255,255,255,0.1)' : '#d1d5db'};border-radius:6px;font-size:1rem;background:var(--bg);color:var(--text);">
               </div>
               
               <div>
-                <label style="display:block;margin-bottom:0.5rem;font-weight:600;color:#374151;">Gender</label>
-                <select id="editGender" style="width:100%;padding:0.75rem;border:1px solid #d1d5db;border-radius:6px;font-size:1rem;">
+                <label style="display:block;margin-bottom:0.5rem;font-weight:600;color:var(--text);">Gender</label>
+                <select id="editGender" style="width:100%;padding:0.75rem;border:1px solid ${isDark ? 'rgba(255,255,255,0.1)' : '#d1d5db'};border-radius:6px;font-size:1rem;background:var(--bg);color:var(--text);">
                   <option value="">Not specified</option>
                   <option value="Male" ${staff.gender === 'Male' ? 'selected' : ''}>Male</option>
                   <option value="Female" ${staff.gender === 'Female' ? 'selected' : ''}>Female</option>
@@ -1592,7 +2133,7 @@
       // Check if table is now empty
       const tbody = document.querySelector('#staffTable tbody');
       if (tbody && tbody.children.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:2rem;color:#6b7280;">No staff members found. Add staff members to manage your team.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:2rem;color:var(--muted);">No staff members found. Add staff members to manage your team.</td></tr>';
       }
     } catch (err) {
       console.error('Failed to delete staff:', err);
@@ -1639,22 +2180,26 @@
       modal.id = 'staffClientsModal';
       modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:1000;';
       
+      const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+      const tableHeaderBg = isDark ? 'rgba(255,255,255,0.05)' : '#f3f4f6';
+      const borderColor = isDark ? 'rgba(255,255,255,0.1)' : '#e5e7eb';
+      
       const modalContent = document.createElement('div');
-      modalContent.style.cssText = 'background:white;border-radius:8px;padding:2rem;max-width:800px;width:90%;max-height:80vh;overflow-y:auto;box-shadow:0 4px 6px rgba(0,0,0,0.1);';
+      modalContent.style.cssText = `background:var(--panel);color:var(--text);border-radius:8px;padding:2rem;max-width:800px;width:90%;max-height:80vh;overflow-y:auto;box-shadow:var(--shadow);border:1px solid ${borderColor};`;
       
       let bookingsHTML = '';
       if (bookings.length === 0) {
-        bookingsHTML = '<p style="text-align:center;color:#6b7280;padding:2rem;">No bookings found for this staff member.</p>';
+        bookingsHTML = `<p style="text-align:center;color:var(--muted);padding:2rem;">No bookings found for this staff member.</p>`;
       } else {
         bookingsHTML = `
           <table style="width:100%;border-collapse:collapse;">
             <thead>
-              <tr style="background:#f3f4f6;text-align:left;">
-                <th style="padding:0.75rem;border-bottom:2px solid #e5e7eb;">Client</th>
-                <th style="padding:0.75rem;border-bottom:2px solid #e5e7eb;">Service</th>
-                <th style="padding:0.75rem;border-bottom:2px solid #e5e7eb;">Date & Time</th>
-                <th style="padding:0.75rem;border-bottom:2px solid #e5e7eb;">Status</th>
-                <th style="padding:0.75rem;border-bottom:2px solid #e5e7eb;">Payment</th>
+              <tr style="background:${tableHeaderBg};text-align:left;">
+                <th style="padding:0.75rem;border-bottom:2px solid ${borderColor};color:var(--muted);">Client</th>
+                <th style="padding:0.75rem;border-bottom:2px solid ${borderColor};color:var(--muted);">Service</th>
+                <th style="padding:0.75rem;border-bottom:2px solid ${borderColor};color:var(--muted);">Date & Time</th>
+                <th style="padding:0.75rem;border-bottom:2px solid ${borderColor};color:var(--muted);">Status</th>
+                <th style="padding:0.75rem;border-bottom:2px solid ${borderColor};color:var(--muted);">Payment</th>
               </tr>
             </thead>
             <tbody>
@@ -1662,19 +2207,19 @@
                 const bookingDate = new Date(booking.BOOKING_DATE).toLocaleDateString();
                 const bookingTime = booking.BOOKING_TIME || 'N/A';
                 return `
-                  <tr style="border-bottom:1px solid #e5e7eb;">
+                  <tr style="border-bottom:1px solid ${borderColor};">
                     <td style="padding:0.75rem;">
-                      <div style="font-weight:600;">${escapeHtml(booking.client_name || 'Guest')}</div>
-                      <div style="font-size:0.875rem;color:#6b7280;">${escapeHtml(booking.client_email || 'N/A')}</div>
-                      ${booking.client_phone ? `<div style="font-size:0.875rem;color:#6b7280;">${escapeHtml(booking.client_phone)}</div>` : ''}
+                      <div style="font-weight:600;color:var(--text);">${escapeHtml(booking.client_name || 'Guest')}</div>
+                      <div style="font-size:0.875rem;color:var(--muted);">${escapeHtml(booking.client_email || 'N/A')}</div>
+                      ${booking.client_phone ? `<div style="font-size:0.875rem;color:var(--muted);">${escapeHtml(booking.client_phone)}</div>` : ''}
                     </td>
                     <td style="padding:0.75rem;">
-                      <div>${escapeHtml(booking.SERVICE_NAME || 'N/A')}</div>
-                      <div style="font-size:0.875rem;color:#6b7280;">₱${parseFloat(booking.service_price || 0).toFixed(2)}</div>
+                      <div style="color:var(--text);">${escapeHtml(booking.SERVICE_NAME || 'N/A')}</div>
+                      <div style="font-size:0.875rem;color:var(--muted);">₱${parseFloat(booking.service_price || 0).toFixed(2)}</div>
                     </td>
                     <td style="padding:0.75rem;">
-                      <div>${bookingDate}</div>
-                      <div style="font-size:0.875rem;color:#6b7280;">${bookingTime}</div>
+                      <div style="color:var(--text);">${bookingDate}</div>
+                      <div style="font-size:0.875rem;color:var(--muted);">${bookingTime}</div>
                     </td>
                     <td style="padding:0.75rem;">
                       <span style="padding:0.25rem 0.5rem;border-radius:4px;font-size:0.875rem;font-weight:500;background:${getStatusColor(booking.booking_status)};color:white;">
@@ -1695,12 +2240,12 @@
       }
       
       modalContent.innerHTML = `
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;border-bottom:2px solid #e5e7eb;padding-bottom:1rem;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;border-bottom:2px solid ${borderColor};padding-bottom:1rem;">
           <div>
-            <h2 style="margin:0;color:#1f2937;">Clients for ${escapeHtml(staffName)}</h2>
-            <p style="margin:0.5rem 0 0 0;color:#6b7280;">Total bookings: ${bookings.length}</p>
+            <h2 style="margin:0;color:var(--text);">Clients for ${escapeHtml(staffName)}</h2>
+            <p style="margin:0.5rem 0 0 0;color:var(--muted);">Total bookings: ${bookings.length}</p>
           </div>
-          <button onclick="document.getElementById('staffClientsModal').remove()" style="background:#ef4444;color:white;border:none;padding:0.5rem 1rem;border-radius:6px;cursor:pointer;font-weight:600;">Close</button>
+          <button onclick="document.getElementById('staffClientsModal').remove()" class="action-btn confirm">Close</button>
         </div>
         ${bookingsHTML}
       `;
@@ -1745,38 +2290,40 @@
   }
   
   window.addStaff = function() {
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    
     const modalHTML = `
       <div style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:10000;display:flex;align-items:center;justify-content:center;" id="addStaffModal">
-        <div style="background:white;border-radius:12px;padding:2rem;max-width:500px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
+        <div style="background:var(--panel);color:var(--text);border-radius:12px;padding:2rem;max-width:500px;width:90%;box-shadow:var(--shadow);border:1px solid rgba(15,23,42,0.1);">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;">
-            <h2 style="margin:0;">Add New Staff Member</h2>
-            <button onclick="document.getElementById('addStaffModal').remove()" style="background:transparent;border:none;font-size:1.5rem;cursor:pointer;color:#6b7280;">✕</button>
+            <h2 style="margin:0;color:var(--text);">Add New Staff Member</h2>
+            <button onclick="document.getElementById('addStaffModal').remove()" style="background:transparent;border:none;font-size:1.5rem;cursor:pointer;color:var(--muted);">✕</button>
           </div>
           
           <form id="addStaffForm" style="display:flex;flex-direction:column;gap:1rem;">
             <div>
-              <label style="display:block;margin-bottom:0.5rem;font-weight:600;color:#374151;">Full Name *</label>
-              <input type="text" id="addFullName" required style="width:100%;padding:0.75rem;border:1px solid #d1d5db;border-radius:6px;font-size:1rem;">
+              <label style="display:block;margin-bottom:0.5rem;font-weight:600;color:var(--text);">Full Name *</label>
+              <input type="text" id="addFullName" required style="width:100%;padding:0.75rem;border:1px solid ${isDark ? 'rgba(255,255,255,0.1)' : '#d1d5db'};border-radius:6px;font-size:1rem;background:var(--bg);color:var(--text);">
             </div>
             
             <div>
-              <label style="display:block;margin-bottom:0.5rem;font-weight:600;color:#374151;">Email *</label>
-              <input type="email" id="addEmail" required style="width:100%;padding:0.75rem;border:1px solid #d1d5db;border-radius:6px;font-size:1rem;">
+              <label style="display:block;margin-bottom:0.5rem;font-weight:600;color:var(--text);">Email *</label>
+              <input type="email" id="addEmail" required style="width:100%;padding:0.75rem;border:1px solid ${isDark ? 'rgba(255,255,255,0.1)' : '#d1d5db'};border-radius:6px;font-size:1rem;background:var(--bg);color:var(--text);">
             </div>
             
             <div>
-              <label style="display:block;margin-bottom:0.5rem;font-weight:600;color:#374151;">Phone</label>
-              <input type="tel" id="addPhone" style="width:100%;padding:0.75rem;border:1px solid #d1d5db;border-radius:6px;font-size:1rem;">
+              <label style="display:block;margin-bottom:0.5rem;font-weight:600;color:var(--text);">Phone</label>
+              <input type="tel" id="addPhone" style="width:100%;padding:0.75rem;border:1px solid ${isDark ? 'rgba(255,255,255,0.1)' : '#d1d5db'};border-radius:6px;font-size:1rem;background:var(--bg);color:var(--text);">
             </div>
             
             <div>
-              <label style="display:block;margin-bottom:0.5rem;font-weight:600;color:#374151;">Role</label>
-              <input type="text" id="addRole" value="Staff" style="width:100%;padding:0.75rem;border:1px solid #d1d5db;border-radius:6px;font-size:1rem;">
+              <label style="display:block;margin-bottom:0.5rem;font-weight:600;color:var(--text);">Role</label>
+              <input type="text" id="addRole" value="Staff" style="width:100%;padding:0.75rem;border:1px solid ${isDark ? 'rgba(255,255,255,0.1)' : '#d1d5db'};border-radius:6px;font-size:1rem;background:var(--bg);color:var(--text);">
             </div>
             
             <div>
-              <label style="display:block;margin-bottom:0.5rem;font-weight:600;color:#374151;">Gender</label>
-              <select id="addGender" style="width:100%;padding:0.75rem;border:1px solid #d1d5db;border-radius:6px;font-size:1rem;">
+              <label style="display:block;margin-bottom:0.5rem;font-weight:600;color:var(--text);">Gender</label>
+              <select id="addGender" style="width:100%;padding:0.75rem;border:1px solid ${isDark ? 'rgba(255,255,255,0.1)' : '#d1d5db'};border-radius:6px;font-size:1rem;background:var(--bg);color:var(--text);">
                 <option value="">Not specified</option>
                 <option value="Male">Male</option>
                 <option value="Female">Female</option>
@@ -1925,7 +2472,7 @@
     dayNames.forEach(day => {
       const dayHeader = document.createElement('div');
       dayHeader.textContent = day;
-      dayHeader.style.cssText = 'text-align: center; font-weight: 600; color: #6b7280; padding: 0.5rem; font-size: 0.875rem;';
+      dayHeader.className = 'calendar-day-header';
       calendarGrid.appendChild(dayHeader);
     });
     
@@ -1940,63 +2487,21 @@
     for (let day = 1; day <= daysInMonth; day++) {
       const dayCell = document.createElement('div');
       dayCell.textContent = day;
-      
-      let bgColor = '#f9fafb';
-      let textColor = '#1f2937';
-      let fontWeight = '400';
-      let border = '1px solid #e5e7eb';
+      dayCell.className = 'calendar-day';
       
       // Check if this day has bookings
       if (bookedDates.has(day)) {
-        bgColor = '#d1fae5';
-        textColor = '#065f46';
-        fontWeight = '600';
-        border = '2px solid #10b981';
+        dayCell.classList.add('has-booking');
       }
       
       // Check if today
       if (day === todayDate) {
-        bgColor = '#dbeafe';
-        textColor = '#1e40af';
-        fontWeight = '700';
-        border = '2px solid #3b82f6';
+        dayCell.classList.add('today');
       }
-      
-      // If both booked and today
-      if (bookedDates.has(day) && day === todayDate) {
-        bgColor = '#bfdbfe';
-        textColor = '#065f46';
-        fontWeight = '700';
-        border = '2px solid #3b82f6';
-      }
-      
-      dayCell.style.cssText = `
-        padding: 0.75rem;
-        text-align: center;
-        background: ${bgColor};
-        color: ${textColor};
-        font-weight: ${fontWeight};
-        border: ${border};
-        border-radius: 8px;
-        cursor: pointer;
-        transition: all 0.2s;
-        min-height: 45px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-      `;
       
       // Add click handler to show bookings for that day
       if (bookedDates.has(day)) {
         dayCell.addEventListener('click', () => showDayBookings(day));
-        dayCell.addEventListener('mouseenter', () => {
-          dayCell.style.transform = 'scale(1.05)';
-          dayCell.style.boxShadow = '0 4px 6px rgba(0,0,0,0.1)';
-        });
-        dayCell.addEventListener('mouseleave', () => {
-          dayCell.style.transform = 'scale(1)';
-          dayCell.style.boxShadow = 'none';
-        });
       }
       
       calendarGrid.appendChild(dayCell);
@@ -2021,30 +2526,35 @@
     modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:1000;';
     
     const modalContent = document.createElement('div');
-    modalContent.style.cssText = 'background:white;border-radius:12px;padding:2rem;max-width:700px;width:90%;max-height:80vh;overflow-y:auto;box-shadow:0 4px 6px rgba(0,0,0,0.1);';
+    modalContent.style.cssText = 'background:var(--panel);color:var(--text);border-radius:12px;padding:2rem;max-width:700px;width:90%;max-height:80vh;overflow-y:auto;box-shadow:var(--shadow);border:1px solid rgba(15,23,42,0.1);';
+    
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    const headerBorder = isDark ? 'rgba(255,255,255,0.1)' : '#e5e7eb';
+    const tableHeaderBg = isDark ? 'rgba(255,255,255,0.05)' : '#f3f4f6';
+    const tableBorder = isDark ? 'rgba(255,255,255,0.08)' : '#e5e7eb';
     
     modalContent.innerHTML = `
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;border-bottom:2px solid #e5e7eb;padding-bottom:1rem;">
-        <h2 style="margin:0;color:#1f2937;">Bookings for ${selectedDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</h2>
-        <button onclick="document.getElementById('dayBookingsModal').remove()" style="background:#ef4444;color:white;border:none;padding:0.5rem 1rem;border-radius:6px;cursor:pointer;font-weight:600;">Close</button>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;border-bottom:2px solid ${headerBorder};padding-bottom:1rem;">
+        <h2 style="margin:0;color:var(--text);">Bookings for ${selectedDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</h2>
+        <button onclick="document.getElementById('dayBookingsModal').remove()" class="action-btn danger">Close</button>
       </div>
       <table style="width:100%;border-collapse:collapse;">
         <thead>
-          <tr style="background:#f3f4f6;text-align:left;">
-            <th style="padding:0.75rem;border-bottom:2px solid #e5e7eb;">Time</th>
-            <th style="padding:0.75rem;border-bottom:2px solid #e5e7eb;">Client</th>
-            <th style="padding:0.75rem;border-bottom:2px solid #e5e7eb;">Service</th>
-            <th style="padding:0.75rem;border-bottom:2px solid #e5e7eb;">Staff</th>
-            <th style="padding:0.75rem;border-bottom:2px solid #e5e7eb;">Status</th>
+          <tr style="background:${tableHeaderBg};text-align:left;">
+            <th style="padding:0.75rem;border-bottom:2px solid ${tableBorder};color:var(--text);">Time</th>
+            <th style="padding:0.75rem;border-bottom:2px solid ${tableBorder};color:var(--text);">Client</th>
+            <th style="padding:0.75rem;border-bottom:2px solid ${tableBorder};color:var(--text);">Service</th>
+            <th style="padding:0.75rem;border-bottom:2px solid ${tableBorder};color:var(--text);">Staff</th>
+            <th style="padding:0.75rem;border-bottom:2px solid ${tableBorder};color:var(--text);">Status</th>
           </tr>
         </thead>
         <tbody>
           ${dayBookings.map(booking => `
-            <tr style="border-bottom:1px solid #e5e7eb;">
-              <td style="padding:0.75rem;">${escapeHtml(formatTime(booking.time))}</td>
-              <td style="padding:0.75rem;">${escapeHtml(booking.client)}</td>
-              <td style="padding:0.75rem;">${escapeHtml(booking.service)}</td>
-              <td style="padding:0.75rem;">${escapeHtml(booking.staff || '—')}</td>
+            <tr style="border-bottom:1px solid ${tableBorder};">
+              <td style="padding:0.75rem;color:var(--text);">${escapeHtml(formatTime(booking.time))}</td>
+              <td style="padding:0.75rem;color:var(--text);">${escapeHtml(booking.client)}</td>
+              <td style="padding:0.75rem;color:var(--text);">${escapeHtml(booking.service)}</td>
+              <td style="padding:0.75rem;color:var(--text);">${escapeHtml(booking.staff || '—')}</td>
               <td style="padding:0.75rem;">
                 <span style="padding:0.25rem 0.5rem;border-radius:4px;font-size:0.875rem;font-weight:500;background:${getStatusColor(booking.status)};color:white;">
                   ${escapeHtml(capitalizeFirst(booking.status || 'pending'))}

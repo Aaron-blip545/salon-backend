@@ -94,6 +94,29 @@ const bookingService = {
 
     // Delete booking
     await bookingRepository.deleteById(booking_id);
+  },
+
+  // Update service status (client arrival and service completion tracking)
+  updateServiceStatus: async ({ booking_id, service_status }) => {
+    // Get booking to verify it exists
+    const booking = await bookingRepository.findById(booking_id);
+    if (!booking) {
+      throw new ApiError(404, 'Booking not found');
+    }
+
+    // Update service status
+    await bookingRepository.updateServiceStatus(booking_id, service_status);
+    
+    // If marking as completed, also update booking status to completed
+    if (service_status === 'completed') {
+      await bookingRepository.updateStatus(booking_id, 'completed');
+    }
+    
+    return {
+      booking_id,
+      service_status,
+      message: `Service status updated to ${service_status}`
+    };
   }
 
 };

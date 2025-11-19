@@ -299,6 +299,33 @@ const bookingController = {
     } catch (error) {
       next(error);
     }
+  },
+
+  // Update service status (arrived, in-progress, completed)
+  updateServiceStatus: async (req, res, next) => {
+    try {
+      const { id } = req.params;
+      const { service_status } = req.body;
+
+      // Validate service_status
+      const validStatuses = ['waiting', 'arrived', 'in-progress', 'completed'];
+      if (!validStatuses.includes(service_status)) {
+        throw new ApiError(400, 'Invalid service status');
+      }
+
+      const result = await bookingService.updateServiceStatus({
+        booking_id: id,
+        service_status
+      });
+
+      res.json({ 
+        success: true, 
+        message: `Service status updated to ${service_status}`,
+        data: result
+      });
+    } catch (error) {
+      next(error);
+    }
   }
 };
 
