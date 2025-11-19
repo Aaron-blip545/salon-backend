@@ -49,9 +49,9 @@ const bookingService = {
     return bookings;
   },
 
-  // Get available time slots for a date
-  getAvailableSlots: async (date) => {
-    const bookedSlots = await bookingRepository.getBookedSlots(date);
+  // Get available time slots for a date (optionally scoped to a staff member)
+  getAvailableSlots: async (date, staff_id) => {
+    const bookedSlots = await bookingRepository.getBookedSlots(date, staff_id);
     const availableSlots = BUSINESS_HOURS.filter(slot => !bookedSlots.includes(slot));
 
     return {

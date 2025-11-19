@@ -39,6 +39,17 @@
           </div>
 
           <div class="field input">
+            <label for="confirmPassword">Confirm Password</label>
+            <input
+              type="password"
+              name="confirmPassword"
+              id="confirmPassword"
+              autocomplete="off"
+              required
+            />
+          </div>
+
+          <div class="field input">
             <label for="phone">Phone Number</label>
             <input
               type="text"
@@ -77,6 +88,14 @@
           form.addEventListener("submit", async (e) => {
             e.preventDefault();
             const formData = new FormData(form);
+
+            const password = formData.get("password");
+            const confirmPassword = formData.get("confirmPassword");
+            if (password !== confirmPassword) {
+              alert("Passwords do not match. Please make sure both passwords are the same.");
+              return;
+            }
+
             const response = await fetch(
               "http://localhost:3000/api/auth/register",
               {

@@ -77,10 +77,50 @@
 
       // Display service details
       let selectedStaffId = null;
+      let selectedStaffName = null;
       let selectedTimeSlot = null;
+      let currentCalendarMonth = new Date().getMonth();
+      let currentCalendarYear = new Date().getFullYear();
+      let selectedDateStr = null; // yyyy-mm-dd
+      const dayAvailabilityCache = {}; // dateStr -> { hasBookings, fullyBooked }
+      let serviceDurationMinutes = 60; // default duration
 
       function displayService(service) {
         const mainContent = document.getElementById("mainContent");
+
+        // derive duration in minutes from service.DURATION
+        // supports DB time format (HH:MM:SS), "60 min", "90 mins", "1 hr", "2 hours", or plain numbers
+        const rawDuration = service.DURATION || service.duration || "60";
+        console.log('Service duration raw value:', rawDuration);
+        const rawStr = String(rawDuration).trim();
+
+        // 1) If value looks like a time (HH:MM or HH:MM:SS), convert to minutes
+        if (/^\d{1,2}:\d{2}(:\d{2})?$/.test(rawStr)) {
+          const parts = rawStr.split(':');
+          const h = parseInt(parts[0], 10) || 0;
+          const m = parseInt(parts[1], 10) || 0;
+          serviceDurationMinutes = h * 60 + m;
+        } else {
+          // 2) Fallback: extract first number and interpret based on units
+          const matched = rawStr.match(/(\d+)/);
+          if (matched) {
+            const num = parseInt(matched[1], 10) || 60;
+            if (/hour|hr/i.test(rawStr)) {
+              // explicit hours
+              serviceDurationMinutes = num * 60;
+            } else if (!/min/i.test(rawStr) && num <= 12) {
+              // plain small integer without 'min' -> assume hours (e.g. 1 => 1 hour)
+              serviceDurationMinutes = num * 60;
+            } else {
+              // otherwise treat as minutes
+              serviceDurationMinutes = num;
+            }
+          } else {
+            serviceDurationMinutes = 60;
+          }
+        }
+        console.log('Computed serviceDurationMinutes:', serviceDurationMinutes);
+
         mainContent.innerHTML = `
                 <!-- PRODUCT DESCRIPTION -->
                 <section class="product card">
@@ -110,7 +150,7 @@
                     </div>
                 </section>
 
-                <!-- DATE PICKER -->
+                <!-- DATE PICKER WITH CALENDAR -->
                 <section class="datepicker card" aria-labelledby="booking-information">
                     <h2 id="booking-information">Booking Information</h2>
                     <p class="small">
@@ -118,8 +158,36 @@
                     </p>
 
                     <form id="dateForm" class="date-form">
-                        <label for="bookDate">Pick a date</label>
-                        <input id="bookDate" name="bookDate" type="date" required />
+                        <input id="bookDate" name="bookDate" type="hidden" required />
+
+                        <div class="calendar-wrapper">
+                          <div class="calendar-header-row">
+                            <button id="prevMonth" type="button" class="calendar-nav-btn">← Previous</button>
+                            <h3 id="currentMonth" class="calendar-month-label">Month Year</h3>
+                            <button id="nextMonth" type="button" class="calendar-nav-btn">Next →</button>
+                          </div>
+                          <div id="calendarGrid" class="calendar-grid">
+                            <!-- Calendar days will be injected here -->
+                          </div>
+                          <div class="calendar-legend">
+                            <div class="calendar-legend-item">
+                              <div class="calendar-legend-box has-booking"></div>
+                              <span>Has bookings</span>
+                            </div>
+                            <div class="calendar-legend-item">
+                              <div class="calendar-legend-box fully-booked"></div>
+                              <span>Fully booked</span>
+                            </div>
+                            <div class="calendar-legend-item">
+                              <div class="calendar-legend-box today"></div>
+                              <span>Today</span>
+                            </div>
+                            <div class="calendar-legend-item">
+                              <div class="calendar-legend-box selected"></div>
+                              <span>Selected date</span>
+                            </div>
+                          </div>
+                        </div>
 
                         <p class="small">
                           Select your preferred staff and time slot after choosing a date.
@@ -127,10 +195,7 @@
 
                         <div class="form-actions">
                             <button id="clearBtn" type="button" class="clearBtn">Clear</button>
-                            <button type="submit" class="btn">Book</button>
                         </div>
-
-                        <p id="chosen" class="chosen" aria-live="polite"></p>
                     </form>
                 </section>
 
@@ -139,6 +204,7 @@
                     <h2>Select Staff</h2>
                     <p class="small">Choose your preferred staff member for this service.</p>
                     <div id="staffList" style="margin-top:10px;">Loading staff...</div>
+                    <p id="selectedStaffInfo" class="chosen" aria-live="polite"></p>
                 </section>
 
                 <!-- TIME SLOTS -->
@@ -146,6 +212,18 @@
                     <h2>Available Time Slots</h2>
                     <p class="small" id="selectedStaffLabel"></p>
                     <div id="timeSlotsGrid" style="margin-top:10px;display:flex;flex-wrap:wrap;gap:8px;"></div>
+                </section>
+
+                <!-- CONFIRMATION / BOOK BUTTON AT BOTTOM -->
+                <section class="card" id="confirmSection">
+                    <h2>Confirm Your Booking</h2>
+                    <p class="small">
+                      Review your selected date, staff, and time slot, then tap book to continue to payment.
+                    </p>
+                    <p id="chosen" class="chosen" aria-live="polite"></p>
+                    <div class="form-actions bottom-actions">
+                      <button id="bookSubmitBtn" type="button" class="btn">Book</button>
+                    </div>
                 </section>
             `;
 
@@ -169,11 +247,20 @@
             .map(
               (s) => `
       <button class="staff-btn" data-staff-id="${s.staff_id}"
+        data-staff-name="${s.full_name || ''}"
+        data-staff-phone="${s.phone || s.PHONE || s.contact_number || s.CONTACT_NUMBER || ''}"
         style="border:1px solid #ccc;border-radius:8px;padding:8px 10px;margin:4px;cursor:pointer;background:#f9f9f9;">
         <div style="font-weight:600;">${s.full_name}</div>
         <div style="font-size:12px;color:#666;">
           ${s.role || "Massage Therapist"}${s.gender ? " • " + s.gender : ""}
         </div>
+        ${
+          s.phone || s.PHONE || s.contact_number || s.CONTACT_NUMBER
+            ? `<div style="font-size:12px;color:#444;">${
+                s.phone || s.PHONE || s.contact_number || s.CONTACT_NUMBER
+              }</div>`
+            : ""
+        }
       </button>`
             )
             .join("");
@@ -186,8 +273,21 @@
               btn.classList.add("selected");
               selectedStaffId = btn.getAttribute("data-staff-id");
               document.getElementById("timeSlotsSection").style.display = "block";
-              document.getElementById("selectedStaffLabel").textContent =
-                "Available times for " + btn.textContent.trim();
+              const staffName = btn.getAttribute("data-staff-name") || btn.textContent.trim();
+              selectedStaffName = staffName;
+              const staffPhone = btn.getAttribute("data-staff-phone") || "";
+              let labelText = "Available times for " + staffName;
+              if (staffPhone) {
+                labelText += " (" + staffPhone + ")";
+              }
+              document.getElementById("selectedStaffLabel").textContent = labelText;
+
+              const selectedInfo = document.getElementById("selectedStaffInfo");
+              if (selectedInfo) {
+                selectedInfo.textContent = staffPhone
+                  ? `Selected staff: ${staffName} (${staffPhone})`
+                  : `Selected staff: ${staffName}`;
+              }
 
               const dateVal = document.getElementById("bookDate").value;
               if (dateVal) {
@@ -210,6 +310,29 @@
         return `${displayHour}:${m} ${meridiem}`;
       }
 
+      function addMinutesToTime(time, minutesToAdd) {
+        const [h, m] = time.split(":");
+        let totalMinutes = parseInt(h, 10) * 60 + parseInt(m, 10) + minutesToAdd;
+        const endHour = Math.floor(totalMinutes / 60);
+        const endMin = totalMinutes % 60;
+        const hh = String(endHour).padStart(2, "0");
+        const mm = String(endMin).padStart(2, "0");
+        return `${hh}:${mm}`;
+      }
+
+      // Helper: mark a specific time slot button as booked (red and disabled)
+      function markSlotAsBooked(time) {
+        const grid = document.getElementById("timeSlotsGrid");
+        if (!grid) return;
+        const btn = grid.querySelector(`button[data-time="${time}"]`);
+        if (!btn) return;
+        btn.disabled = true;
+        btn.style.background = "#fde2e2"; // light red
+        btn.style.color = "#a33";
+        btn.style.borderColor = "#f28b82";
+        btn.title = "This time slot has already been booked.";
+      }
+
       async function loadTimeSlots(date) {
         if (!selectedStaffId) return;
         const grid = document.getElementById("timeSlotsGrid");
@@ -219,7 +342,7 @@
           const res = await fetch(
             `${API_BASE}/bookings/available-slots?date=${encodeURIComponent(
               date
-            )}`
+            )}&staff_id=${encodeURIComponent(selectedStaffId)}`
           );
           const data = await res.json();
           if (!data.success) throw new Error(data.message || "Failed to load slots");
@@ -240,10 +363,15 @@
           ];
 
           grid.innerHTML = "";
+          const allBookedForStaff = hours.every((time) => booked.has(time));
+
           hours.forEach((time) => {
             const isBooked = booked.has(time);
             const btn = document.createElement("button");
-            btn.textContent = formatTimeToAmPm(time);
+            const endTime = addMinutesToTime(time, serviceDurationMinutes);
+            btn.textContent = `${formatTimeToAmPm(time)} - ${formatTimeToAmPm(
+              endTime
+            )}`;
             btn.setAttribute("data-time", time);
 
             // base style for all buttons
@@ -285,6 +413,14 @@
             }
             grid.appendChild(btn);
           });
+
+          // If all possible slots for this staff on this date are booked, update label to indicate unavailability
+          if (allBookedForStaff) {
+            const label = document.getElementById("selectedStaffLabel");
+            if (label) {
+              label.textContent += " — No available time slots left for this staff on this date.";
+            }
+          }
         } catch (e) {
           console.error("Error loading slots", e);
           grid.textContent = "Failed to load time slots.";
@@ -309,14 +445,45 @@
       function initializeFormHandlers() {
         const bookingDate = document.getElementById("bookDate");
         const chosen = document.getElementById("chosen");
-        const form = document.getElementById("dateForm");
         const clearBtn = document.getElementById("clearBtn");
+        const bookBtn = document.getElementById("bookSubmitBtn");
+        const prevMonthBtn = document.getElementById("prevMonth");
+        const nextMonthBtn = document.getElementById("nextMonth");
 
-        // Set minimum date to today
-        const today = new Date().toISOString().split("T")[0];
-        bookingDate.setAttribute("min", today);
+        // Set minimum date to tomorrow (no same-day bookings)
+        const todayObj = new Date();
+        const tomorrow = new Date(
+          todayObj.getFullYear(),
+          todayObj.getMonth(),
+          todayObj.getDate() + 1
+        );
+        const minDateStr = tomorrow.toISOString().split("T")[0];
+        bookingDate.setAttribute("min", minDateStr);
 
-        // Validate weekday when date changes
+        // Calendar navigation
+        if (prevMonthBtn) {
+          prevMonthBtn.addEventListener("click", () => {
+            currentCalendarMonth--;
+            if (currentCalendarMonth < 0) {
+              currentCalendarMonth = 11;
+              currentCalendarYear--;
+            }
+            renderBookingCalendar();
+          });
+        }
+
+        if (nextMonthBtn) {
+          nextMonthBtn.addEventListener("click", () => {
+            currentCalendarMonth++;
+            if (currentCalendarMonth > 11) {
+              currentCalendarMonth = 0;
+              currentCalendarYear++;
+            }
+            renderBookingCalendar();
+          });
+        }
+
+        // Validate weekday when hidden date value changes (triggered from calendar)
         bookingDate.addEventListener("change", () => {
           if (!bookingDate.value) {
             chosen.textContent = "";
@@ -326,10 +493,24 @@
           const date = new Date(bookingDate.value + "T00:00:00");
           const day = date.getDay(); // 0 = Sunday, 6 = Saturday
 
+          const todayCheck = new Date();
+          todayCheck.setHours(0, 0, 0, 0);
+
           if (day === 0 || day === 6) {
             alert("Please select a weekday (Monday to Friday).");
             bookingDate.value = "";
             chosen.textContent = "";
+            selectedDateStr = null;
+            renderBookingCalendar();
+            return;
+          }
+
+          if (date.getTime() === todayCheck.getTime()) {
+            alert("You can't book on the current day. Please choose a future date.");
+            bookingDate.value = "";
+            chosen.textContent = "";
+            selectedDateStr = null;
+            renderBookingCalendar();
             return;
           }
 
@@ -356,6 +537,10 @@
           if (timeSlotsSection) {
             timeSlotsSection.style.display = "none";
           }
+
+          selectedDateStr = null;
+          bookingDate.value = "";
+          renderBookingCalendar();
         });
 
         // Update chosen display
@@ -384,10 +569,7 @@
           }
         }
 
-        // Handle form submission
-        form.addEventListener("submit", async (e) => {
-          e.preventDefault();
-
+        async function submitBooking() {
           const date = bookingDate.value;
 
           // Validate inputs
@@ -446,6 +628,7 @@
                 booking_id: created.BOOKING_ID || created.booking_id,
                 service_id: bookingData.service_id,
                 service_name: currentService.SERVICE_NAME,
+                staff_name: selectedStaffName,
                 booking_date: bookingData.booking_date,
                 booking_time: bookingData.booking_time,
                 price: currentService.PRICE,
@@ -456,9 +639,188 @@
             window.location.href = "paymentmethod.html";
           } catch (error) {
             console.error("Booking error:", error);
-            alert("Could not create booking: " + error.message);
+
+            const msg = (error && error.message ? error.message : "").toLowerCase();
+            const chosenMsgEl = document.getElementById("chosen");
+
+            if (msg.includes("already booked") || msg.includes("time slot")) {
+              // Mark the currently selected slot as booked so the user sees it as unavailable
+              if (selectedTimeSlot) {
+                markSlotAsBooked(selectedTimeSlot);
+              }
+
+              if (chosenMsgEl) {
+                chosenMsgEl.textContent =
+                  "That time slot has just been booked by someone else. Please choose another available time.";
+              }
+
+              // Optionally refresh slots for this date to catch any other new bookings
+              if (selectedStaffId && date) {
+                loadTimeSlots(date);
+              }
+            } else {
+              alert("Could not create booking: " + (error.message || "Unknown error"));
+            }
           }
+        }
+
+        if (bookBtn) {
+          bookBtn.addEventListener("click", (e) => {
+            e.preventDefault();
+            submitBooking();
+          });
+        }
+
+        // Initial calendar render
+        renderBookingCalendar();
+      }
+
+      function renderBookingCalendar() {
+        const monthNames = [
+          "January",
+          "February",
+          "March",
+          "April",
+          "May",
+          "June",
+          "July",
+          "August",
+          "September",
+          "October",
+          "November",
+          "December",
+        ];
+
+        const monthTitle = document.getElementById("currentMonth");
+        const calendarGrid = document.getElementById("calendarGrid");
+
+        if (!monthTitle || !calendarGrid) return;
+
+        monthTitle.textContent = `${monthNames[currentCalendarMonth]} ${currentCalendarYear}`;
+
+        const today = new Date();
+        const todayY = today.getFullYear();
+        const todayM = today.getMonth();
+        const todayD = today.getDate();
+
+        const firstDay = new Date(currentCalendarYear, currentCalendarMonth, 1).getDay();
+        const daysInMonth = new Date(
+          currentCalendarYear,
+          currentCalendarMonth + 1,
+          0
+        ).getDate();
+
+        calendarGrid.innerHTML = "";
+
+        const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+        dayNames.forEach((d) => {
+          const head = document.createElement("div");
+          head.textContent = d;
+          head.className = "calendar-day-header";
+          calendarGrid.appendChild(head);
         });
+
+        for (let i = 0; i < firstDay; i++) {
+          const empty = document.createElement("div");
+          empty.className = "calendar-empty";
+          calendarGrid.appendChild(empty);
+        }
+
+        for (let day = 1; day <= daysInMonth; day++) {
+          const cell = document.createElement("div");
+          cell.textContent = day;
+          cell.className = "calendar-day";
+
+          const cellDate = new Date(currentCalendarYear, currentCalendarMonth, day);
+          const dateStr = cellDate.toISOString().split("T")[0];
+          const isToday =
+            cellDate.getFullYear() === todayY &&
+            cellDate.getMonth() === todayM &&
+            cellDate.getDate() === todayD;
+
+          if (isToday) {
+            cell.classList.add("today");
+          }
+
+          if (selectedDateStr === dateStr) {
+            cell.classList.add("selected-date");
+          }
+
+          // Disable past dates and current day (no same-day booking)
+          if (cellDate <= new Date(todayY, todayM, todayD)) {
+            cell.classList.add("disabled-date");
+          } else {
+            // Click handler for selectable dates (weekdays only)
+            cell.addEventListener("click", () => {
+              const weekday = cellDate.getDay();
+              if (weekday === 0 || weekday === 6) {
+                alert("Please select a weekday (Monday to Friday).");
+                return;
+              }
+
+              selectedDateStr = dateStr;
+
+              document
+                .querySelectorAll(".calendar-day")
+                .forEach((dEl) => dEl.classList.remove("selected-date"));
+              cell.classList.add("selected-date");
+
+              const bookingDate = document.getElementById("bookDate");
+              if (bookingDate) {
+                bookingDate.value = selectedDateStr;
+                bookingDate.dispatchEvent(new Event("change"));
+              }
+
+              if (selectedStaffId) {
+                loadTimeSlots(selectedDateStr);
+              }
+            });
+          }
+
+          calendarGrid.appendChild(cell);
+
+          // After appending, mark booked days asynchronously
+          markDayBookings(dateStr, cell);
+        }
+      }
+
+      async function markDayBookings(dateStr, cell) {
+        try {
+          if (dayAvailabilityCache[dateStr]) {
+            if (dayAvailabilityCache[dateStr].hasBookings) {
+              cell.classList.add("has-booking-date");
+            }
+            return;
+          }
+
+          const res = await fetch(
+            `${API_BASE}/bookings/available-slots?date=${encodeURIComponent(
+              dateStr
+            )}`
+          );
+          const data = await res.json();
+
+          if (!data.success || !data.data) {
+            dayAvailabilityCache[dateStr] = { hasBookings: false, fullyBooked: false };
+            return;
+          }
+
+          const bookedSlots = data.data.booked_slots || [];
+          const availableSlots = data.data.available_slots || [];
+          const hasBookings = bookedSlots.length > 0;
+          const fullyBooked = hasBookings && availableSlots.length === 0;
+
+          dayAvailabilityCache[dateStr] = { hasBookings, fullyBooked };
+
+          if (hasBookings) {
+            cell.classList.add("has-booking-date");
+            if (fullyBooked) {
+              cell.classList.add("fully-booked-date");
+            }
+          }
+        } catch (err) {
+          console.error("Error checking day bookings", err);
+        }
       }
 
       // Load service when page loads

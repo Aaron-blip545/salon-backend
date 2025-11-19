@@ -59,7 +59,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   if (!token) {
-     tbody.innerHTML = '<tr><td colspan="6">Please login to view your bookings.</td></tr>';
+     tbody.innerHTML = '<tr><td colspan="7">Please login to view your bookings.</td></tr>';
     return;
   }
 
@@ -68,126 +68,284 @@ document.addEventListener('DOMContentLoaded', async () => {
       headers: { 'Authorization': `Bearer ${token}` }
     });
     const json = await resp.json();
-    let bookings = [];
-    if (json && json.success && Array.isArray(json.data)) bookings = json.data;
-    else if (Array.isArray(json)) bookings = json;
+    let allBookings = [];
+    if (json && json.success && Array.isArray(json.data)) allBookings = json.data;
+    else if (Array.isArray(json)) allBookings = json;
 
-    if (bookings.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6">No bookings found.</td></tr>';
-      return;
+    // Deduplicate by booking ID to avoid multiple rows per booking
+    // when there are multiple transactions. Prefer rows with staff_name
+    // and more specific payment_status (e.g. PARTIAL_PENDING over PENDING).
+    const byBookingId = new Map();
+    allBookings.forEach((b) => {
+      const id = b.BOOKING_ID || b.booking_id;
+      if (!id) {
+        // keep rows without id as-is
+        const tempId = `noid-${Math.random()}`;
+        byBookingId.set(tempId, b);
+        return;
+      }
+
+      const existing = byBookingId.get(id);
+      if (!existing) {
+        byBookingId.set(id, b);
+        return;
+      }
+
+      const existingStatus = (existing.payment_status || existing.PAYMENT_STATUS || '').toUpperCase();
+      const newStatus = (b.payment_status || b.PAYMENT_STATUS || '').toUpperCase();
+      const existingStaff = (existing.staff_name || '').trim();
+      const newStaff = (b.staff_name || '').trim();
+
+      let useNew = false;
+
+      // Prefer row with staff name over one without
+      if (!existingStaff && newStaff) {
+        useNew = true;
+      }
+
+      // Prefer more specific payment status (e.g. PARTIAL_*, APPROVED over plain PENDING)
+      const isExistingPendingOnly = existingStatus === 'PENDING';
+      const isNewMoreSpecific =
+        newStatus.includes('PARTIAL') || newStatus === 'APPROVED' || newStatus === 'FULLY_PAID';
+      if (!useNew && isExistingPendingOnly && isNewMoreSpecific) {
+        useNew = true;
+      }
+
+      if (useNew) {
+        byBookingId.set(id, b);
+      }
+    });
+
+    allBookings = Array.from(byBookingId.values());
+
+    // Debug: see what API actually returns
+    console.log('Bookings API raw response:', json);
+    console.log('Normalized bookings array:', allBookings);
+
+    const searchInput = document.getElementById('booking-search');
+
+    function isPendingBooking(b) {
+      const bookingStatus = (b.booking_status || b.STATUS_NAME || b.status_name || '').toUpperCase();
+      const paymentStatus = (b.payment_status || b.PAYMENT_STATUS || '').toUpperCase();
+      // Only show bookings that already have a payment_status entry
+      if (!paymentStatus) return false;
+
+      // Treat bookings as active unless they are explicitly CANCELLED or COMPLETED
+      const isBookingActive = bookingStatus !== 'CANCELLED' && bookingStatus !== 'COMPLETED';
+      // Pending-like payment statuses (e.g. PARTIAL_PENDING, PENDING, PARTIAL_PAID)
+      const isPaymentPending = paymentStatus.includes('PENDING') || paymentStatus === 'PARTIAL_PAID';
+      return isBookingActive && isPaymentPending;
     }
 
-      // Clear placeholder rows before populating
+    function renderBookings(filterText = '') {
+      if (!allBookings.length) {
+        tbody.innerHTML = '<tr><td colspan="9">No bookings found.</td></tr>';
+        return;
+      }
+
+      const term = filterText.trim().toLowerCase();
+
+      let filtered = allBookings.filter(isPendingBooking);
+
+      // If pending-filter removed everything but we do have bookings,
+      // fall back to showing all so the user sees their data.
+      if (!filtered.length && allBookings.length) {
+        console.warn('No bookings matched pending filter; falling back to all bookings.');
+        filtered = allBookings.slice();
+      }
+
+      filtered = filtered.filter((b) => {
+        if (!term) return true;
+        const svc = (b.SERVICE_NAME || b.service_name || '').toString().toLowerCase();
+        const staff = (b.staff_name || '').toString().toLowerCase();
+        const dateStr = new Date(b.BOOKING_DATE || b.booking_date).toLocaleDateString().toLowerCase();
+        const bookingStatus = (b.booking_status || b.STATUS_NAME || b.status_name || '').toLowerCase();
+        const paymentStatus = (b.payment_status || '').toLowerCase();
+        return (
+          svc.includes(term) ||
+          staff.includes(term) ||
+          dateStr.includes(term) ||
+          bookingStatus.includes(term) ||
+          paymentStatus.includes(term)
+        );
+      });
+
+      if (!filtered.length) {
+        tbody.innerHTML = '<tr><td colspan="9">No bookings found.</td></tr>';
+        return;
+      }
+
       tbody.innerHTML = '';
 
-    bookings.forEach(b => {
-      const tr = document.createElement('tr');
-      const svc = document.createElement('td');
-      svc.textContent = b.SERVICE_NAME || b.service_name || '';
-      const date = document.createElement('td');
-      date.textContent = new Date(b.BOOKING_DATE || b.booking_date).toLocaleDateString();
-      const time = document.createElement('td');
-      time.textContent = formatTime(b.BOOKING_TIME || b.booking_time || '');
+      filtered.forEach((b) => {
+        const tr = document.createElement('tr');
+        const svc = document.createElement('td');
+        svc.textContent = b.SERVICE_NAME || b.service_name || '';
 
-      // Total amount (prefer service_price or transaction price)
-      const total = document.createElement('td');
-      const priceVal = parseFloat(b.service_price || b.transaction_price || b.PRICE || 0) || 0;
-      total.textContent = `₱${priceVal.toFixed(2)}`;
+        const staffTd = document.createElement('td');
+        staffTd.textContent = b.staff_name || '-';
 
-      const status = document.createElement('td');
-      status.className = 'status';
-      status.textContent = (b.booking_status || b.STATUS_NAME || b.status_name || '').toUpperCase();
+        const date = document.createElement('td');
+        date.textContent = new Date(b.BOOKING_DATE || b.booking_date).toLocaleDateString();
+        const time = document.createElement('td');
+        time.textContent = formatTime(b.BOOKING_TIME || b.booking_time || '');
 
-      const action = document.createElement('td');
+        // Total amount (prefer service_price or transaction price)
+        const total = document.createElement('td');
+        const priceVal = parseFloat(b.service_price || b.transaction_price || b.PRICE || 0) || 0;
+        total.textContent = `₱${priceVal.toFixed(2)}`;
 
-      // Get booking status
-      const bookingStatus = (b.booking_status || b.STATUS_NAME || b.status_name || '').toUpperCase();
-      
-      // Allow cancellation for all bookings except already CANCELLED or COMPLETED
-      const canCancel = bookingStatus !== 'CANCELLED' && bookingStatus !== 'COMPLETED';
+        // Remaining balance (for down payment / partial payments)
+        const remainingTd = document.createElement('td');
+        const remainingVal = parseFloat(b.remaining_balance || b.REMAINING_BALANCE || 0) || 0;
+        remainingTd.textContent = remainingVal > 0 ? `₱${remainingVal.toFixed(2)}` : '₱0.00';
 
-      if (canCancel) {
-        const cancelBtn = document.createElement('button');
-        cancelBtn.className = 'cancel-btn';
-        cancelBtn.textContent = 'Cancel';
-        cancelBtn.addEventListener('click', async () => {
-          const result = await Swal.fire({
-            title: 'Cancel Booking?',
-            text: 'Are you sure you want to cancel this booking?',
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: '#d33',
-            cancelButtonColor: '#3085d6',
-            confirmButtonText: 'Yes, cancel it!',
-            cancelButtonText: 'No, keep it'
-          });
-          
-          if (!result.isConfirmed) return;
-          
-          try {
-            const id = b.BOOKING_ID || b.booking_id;
+        const bookingStatusRaw = (b.booking_status || b.STATUS_NAME || b.status_name || '').toUpperCase();
+        const paymentStatusRaw = (b.payment_status || b.PAYMENT_STATUS || '').toUpperCase();
+
+        // SERVICE column: show simple text only (no badge) so the UI is cleaner.
+        let serviceLabel = '-';
+        if (bookingStatusRaw === 'PENDING') {
+          serviceLabel = 'Pending';
+        } else if (bookingStatusRaw === 'IN_PROGRESS') {
+          serviceLabel = 'In Progress';
+        } else if (bookingStatusRaw === 'COMPLETED') {
+          serviceLabel = 'Completed';
+        } else if (bookingStatusRaw === 'CANCELLED') {
+          serviceLabel = 'Cancelled';
+        }
+
+        const serviceStatusTd = document.createElement('td');
+        serviceStatusTd.textContent = serviceLabel;
+        serviceStatusTd.className = '';
+
+        // PAYMENT STATUS column: keep badge and distinguish partial payments.
+        let paymentLabel = 'Pending';
+        let paymentKey = 'pending';
+        if (paymentStatusRaw === 'APPROVED' || paymentStatusRaw === 'PAID' || paymentStatusRaw === 'FULLY_PAID') {
+          paymentLabel = 'Approved';
+          paymentKey = 'approved';
+        } else if (paymentStatusRaw.includes('PARTIAL')) {
+          // e.g. PARTIAL_PENDING, PARTIAL_PAID, etc.
+          paymentLabel = 'Partial Pending';
+          paymentKey = 'partial';
+        } else if (!paymentStatusRaw || paymentStatusRaw.includes('PENDING')) {
+          paymentLabel = 'Pending';
+          paymentKey = 'pending';
+        } else if (paymentStatusRaw === 'REJECTED' || paymentStatusRaw === 'FAILED') {
+          paymentLabel = 'Rejected';
+          paymentKey = 'rejected';
+        }
+
+        const paymentStatusTd = document.createElement('td');
+        paymentStatusTd.textContent = paymentLabel;
+        paymentStatusTd.className = `status-badge status-badge--payment status-badge--${paymentKey}`;
+
+        const action = document.createElement('td');
+
+        // Allow cancellation for all bookings except already CANCELLED or COMPLETED
+        const canCancel = bookingStatusRaw !== 'CANCELLED' && bookingStatusRaw !== 'COMPLETED';
+
+        if (canCancel) {
+          const cancelBtn = document.createElement('button');
+          cancelBtn.className = 'cancel-btn';
+          cancelBtn.textContent = 'Cancel';
+          cancelBtn.addEventListener('click', async () => {
+            const result = await Swal.fire({
+              title: 'Cancel Booking?',
+              text: 'Are you sure you want to cancel this booking?',
+              icon: 'warning',
+              showCancelButton: true,
+              confirmButtonColor: '#d33',
+              cancelButtonColor: '#3085d6',
+              confirmButtonText: 'Yes, cancel it!',
+              cancelButtonText: 'No, keep it'
+            });
             
-            // Disable button and show loading state
-            cancelBtn.disabled = true;
-            cancelBtn.textContent = 'Cancelling...';
+            if (!result.isConfirmed) return;
             
-            const del = await fetch(`${API_BASE}/bookings/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
-            const resjson = await del.json();
-            if (resjson && resjson.success) {
-              // Update the status cell
-              status.textContent = 'CANCELLED';
+            try {
+              const id = b.BOOKING_ID || b.booking_id;
               
-              // Remove the cancel button and replace with dash
-              action.innerHTML = '';
-              action.textContent = '-';
+              // Disable button and show loading state
+              cancelBtn.disabled = true;
+              cancelBtn.textContent = 'Cancelling...';
               
-              Swal.fire({
-                icon: 'success',
-                title: 'Cancelled!',
-                text: 'Booking cancelled successfully!',
-                confirmButtonColor: '#3085d6'
-              });
-            } else {
+              const del = await fetch(`${API_BASE}/bookings/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
+              const resjson = await del.json();
+              if (resjson && resjson.success) {
+                // Update service status column
+                serviceStatusTd.textContent = 'Cancelled';
+                serviceStatusTd.className = '';
+
+                // Update payment status column to Cancelled as well
+                paymentStatusTd.textContent = 'Cancelled';
+                paymentStatusTd.className = 'status-badge status-badge--payment status-badge--cancelled';
+
+                // Remove the cancel button and replace with dash
+                action.innerHTML = '';
+                action.textContent = '-';
+                
+                Swal.fire({
+                  icon: 'success',
+                  title: 'Cancelled!',
+                  text: 'Booking cancelled successfully!',
+                  confirmButtonColor: '#3085d6'
+                });
+              } else {
+                Swal.fire({
+                  icon: 'error',
+                  title: 'Error',
+                  text: 'Failed to cancel booking: ' + (resjson.message || 'Unknown error'),
+                  confirmButtonColor: '#d33'
+                });
+                // Re-enable button if failed
+                cancelBtn.disabled = false;
+                cancelBtn.textContent = 'Cancel';
+              }
+            } catch (err) {
+              console.error(err);
               Swal.fire({
                 icon: 'error',
-                title: 'Error',
-                text: 'Failed to cancel booking: ' + (resjson.message || 'Unknown error'),
+                title: 'Network Error',
+                text: 'Network error. Please try again.',
                 confirmButtonColor: '#d33'
               });
-              // Re-enable button if failed
+              // Re-enable button if error
               cancelBtn.disabled = false;
               cancelBtn.textContent = 'Cancel';
             }
-          } catch (err) {
-            console.error(err);
-            Swal.fire({
-              icon: 'error',
-              title: 'Network Error',
-              text: 'Network error. Please try again.',
-              confirmButtonColor: '#d33'
-            });
-            // Re-enable button if error
-            cancelBtn.disabled = false;
-            cancelBtn.textContent = 'Cancel';
-          }
-        });
+          });
 
-        action.appendChild(cancelBtn);
-      } else {
-        action.textContent = '-';
-      }
-      tr.appendChild(svc);
-      tr.appendChild(date);
-      tr.appendChild(time);
-      tr.appendChild(total);
-      tr.appendChild(status);
-      tr.appendChild(action);
-      tbody.appendChild(tr);
-    });
+          action.appendChild(cancelBtn);
+        } else {
+          action.textContent = '-';
+        }
+        tr.appendChild(svc);
+        tr.appendChild(staffTd);
+        tr.appendChild(date);
+        tr.appendChild(time);
+        tr.appendChild(total);
+        tr.appendChild(remainingTd);
+        tr.appendChild(serviceStatusTd);
+        tr.appendChild(paymentStatusTd);
+        tr.appendChild(action);
+        tbody.appendChild(tr);
+      });
+    }
+
+    // Initial render (pending bookings)
+    renderBookings('');
+
+    if (searchInput) {
+      searchInput.addEventListener('input', (e) => {
+        renderBookings(e.target.value || '');
+      });
+    }
 
   } catch (err) {
     console.error(err);
-    tbody.innerHTML = '<tr><td colspan="5">Failed to load bookings.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="7">Failed to load bookings.</td></tr>';
   }
 });
 

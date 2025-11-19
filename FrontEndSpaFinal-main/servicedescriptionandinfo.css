@@ -141,6 +141,153 @@ background-image: linear-gradient(to right, #43e97b 0%, #38f9d7 100%);  margin: 
   margin-top: 6px;
 }
 
+/* Selected staff indicator */
+.staff-btn.selected {
+  background-color: #c8f7c5 !important;
+  border-color: #2ecc71 !important;
+  color: #1b5e20 !important;
+  box-shadow: 0 0 0 2px rgba(46, 204, 113, 0.25);
+}
+
+/* ---------- INLINE CALENDAR FOR BOOKINGS ---------- */
+.calendar-wrapper {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid #e0e0e0;
+  background-color: #fafafa;
+}
+
+.calendar-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.calendar-month-label {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.calendar-nav-btn {
+  background-color: #6ab89b;
+  color: #fff;
+  border: none;
+  padding: 6px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+
+.calendar-nav-btn:hover {
+  background-color: #4f9b80;
+}
+
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+}
+
+.calendar-day-header {
+  text-align: center;
+  font-weight: 600;
+  font-size: 0.75rem;
+  color: #777;
+  padding: 4px 0;
+}
+
+.calendar-empty {
+  padding: 10px 0;
+}
+
+.calendar-day {
+  padding: 8px 0;
+  text-align: center;
+  border-radius: 6px;
+  border: 1px solid #e0e0e0;
+  background-color: #fff;
+  font-size: 0.85rem;
+  cursor: pointer;
+  user-select: none;
+}
+
+.calendar-day.today {
+  border-color: #6ab89b;
+  font-weight: bold;
+}
+
+.calendar-day.disabled-date {
+  color: #bbb;
+  background-color: #f3f3f3;
+  cursor: not-allowed;
+}
+
+.calendar-day.selected-date {
+  background-color: #c8f7c5;
+  border-color: #2ecc71;
+  color: #1b5e20;
+  font-weight: 600;
+}
+
+.calendar-day.has-booking-date {
+  background-color: #fff7e0;
+  border-color: #f4b400;
+}
+
+.calendar-day.fully-booked-date {
+  background-color: #fde2e2;
+  border-color: #f28b82;
+}
+
+.calendar-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 8px;
+  font-size: 0.75rem;
+  color: #666;
+}
+
+.calendar-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.calendar-legend-box {
+  width: 14px;
+  height: 14px;
+  border-radius: 4px;
+  border: 1px solid #ccc;
+}
+
+.calendar-legend-box.has-booking {
+  background-color: #fff7e0;
+  border-color: #f4b400;
+}
+
+.calendar-legend-box.fully-booked {
+  background-color: #fde2e2;
+  border-color: #f28b82;
+}
+
+.calendar-legend-box.today {
+  background-color: #6ab89b;
+  border-color: #6ab89b;
+}
+
+.calendar-legend-box.selected {
+  background-color: #c8f7c5;
+  border-color: #2ecc71;
+}
+
+.bottom-actions {
+  margin-top: 10px;
+  justify-content: flex-end;
+}
+
 /* ---------- RESPONSIVE DESIGN ---------- */
 @media (max-width: 720px) {
   .product {

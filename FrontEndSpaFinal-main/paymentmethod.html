@@ -27,6 +27,10 @@
             <span><strong id="service-name">Loading...</strong></span>
           </div>
           <div class="summary-item">
+            <span>Staff:</span>
+            <span id="staff-name">-</span>
+          </div>
+          <div class="summary-item">
             <span>Date:</span>
             <span id="booking-date">Loading...</span>
           </div>
@@ -39,13 +43,16 @@
             <span id="service-price">₱0.00</span>
           </div>
           <div class="summary-item">
-            <span>Booking Fee (20%):</span>
+            <span>Booking Fee (10%):</span>
             <span id="booking-fee">₱0.00</span>
           </div>
           <div class="summary-item total">
             <span>Total Amount:</span>
             <span id="total-price">₱0.00</span>
           </div>
+          <p style="margin-top: 8px; font-size: 12px; color: #b91c1c; line-height: 1.4;">
+            * Booking fees and payments are <strong>non-refundable</strong>. Please double-check your selected date, time, and staff before confirming.
+          </p>
         </div>
 
         <!-- Payment Method Selection -->
@@ -53,16 +60,16 @@
           <h3>Select Payment Method</h3>
           <div class="payment-methods">
             <div class="payment-option" id="cash-option">
-              <div class="payment-icon">💵</div>
-              <div class="option-title">Cash Payment</div>
-              <div class="option-description">Pay on service day</div>
+              <div class="payment-icon">📱</div>
+              <div class="option-title">Down Payment</div>
+              <div class="option-description">Pay the 10% booking fee now via GCash</div>
               <div class="check-icon">✓</div>
             </div>
 
             <div class="payment-option" id="online-option">
               <div class="payment-icon">📱</div>
-              <div class="option-title">GCash</div>
-              <div class="option-description">Pay via GCash QR</div>
+              <div class="option-title">Full Payment</div>
+              <div class="option-description">Pay the full amount now via GCash QR</div>
               <div class="check-icon">✓</div>
             </div>
           </div>

@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Booked Services</title>
+    <title>Booked History</title>
     <link rel="stylesheet" href="bookedservices.css" />
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   </head>
@@ -21,20 +21,19 @@
           <a href="MainPage.html" class="menu-link">Home</a>
           <a href="accountsettings.html" class="menu-link">Account</a>
           <a href="bookedservices.html" class="menu-link">Booked Services</a>
+          <a href="bookedhistory.html" class="menu-link">Booked History</a>
           <a href="loginform.html" id="logoutBtn" class="menu-link">LogOut</a>
         </div>
       </div>
 
-      <!-- Dashboard Cards -->
       <div class="cards">
-        <!-- Table Section -->
         <div class="table-section">
-          <h2>Upcoming Appointments</h2>
+          <h2>Booked History</h2>
           <div class="table-toolbar" style="margin: 8px 0 12px; display:flex; justify-content: flex-end;">
             <input
-              id="booking-search"
+              id="history-search"
               type="text"
-              placeholder="Search bookings (service, staff, date, status)"
+              placeholder="Search history (service, staff, date, status)"
               style="padding:6px 10px; border-radius:6px; border:1px solid #ccc; min-width:220px;"
             />
           </div>
@@ -47,20 +46,21 @@
                 <th>Time</th>
                 <th>Total</th>
                 <th>Balance</th>
-                <th>Service Status</th>
+                <th>Service</th>
                 <th>Payment Status</th>
                 <th>Action</th>
               </tr>
             </thead>
-            <tbody id="bookings-tbody">
+            <tbody id="history-tbody">
               <tr>
-                <td colspan="9">Loading bookings...</td>
+                <td colspan="9">Loading history...</td>
               </tr>
             </tbody>
           </table>
         </div>
       </div>
     </div>
-    <script src="bookedservices.js"></script>
+
+    <script src="bookedhistory.js"></script>
   </body>
 </html>

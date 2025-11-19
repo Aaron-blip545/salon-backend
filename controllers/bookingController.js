@@ -131,13 +131,13 @@ const bookingController = {
   // Get available time slots
   getAvailableSlots: async (req, res, next) => {
     try {
-      const { date } = req.query;
+      const { date, staff_id } = req.query;
 
       if (!date) {
         throw new ApiError(400, 'Date is required');
       }             
 
-      const slots = await bookingService.getAvailableSlots(date);
+      const slots = await bookingService.getAvailableSlots(date, staff_id);
 
       res.json({
         success: true,

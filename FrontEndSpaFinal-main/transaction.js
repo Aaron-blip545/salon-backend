@@ -20,17 +20,25 @@ function loadBookingDetails() {
         return;
     }
     
-    // Calculate booking fee (20% of service price)
+    // Calculate booking fee (10% of service price)
     const servicePrice = parseFloat(bookingDetails.price);
-    const bookingFee = servicePrice * 0.20;
-    const totalAmount = servicePrice; // Total is full service price (booking fee is part of it)
-    
+    const bookingFee = servicePrice * 0.10;
+    // Grand total for full payment = service price + booking fee
+    const grandTotal = servicePrice + bookingFee;
+    // Down payment = 20% of (service price + booking fee)
+    const downPaymentAmount = grandTotal * 0.20;
+
     // Store calculated values in bookingDetails for use in payment processing
     bookingDetails.bookingFee = bookingFee;
-    bookingDetails.totalAmount = totalAmount;
+    bookingDetails.grandTotal = grandTotal;
+    bookingDetails.downPaymentAmount = downPaymentAmount;
     
     // Display booking summary
     document.getElementById('service-name').textContent = bookingDetails.service_name;
+    const staffNameEl = document.getElementById('staff-name');
+    if (staffNameEl) {
+        staffNameEl.textContent = bookingDetails.staff_name || '-';
+    }
     document.getElementById('booking-date').textContent = formatDate(bookingDetails.booking_date);
     document.getElementById('booking-time').textContent = formatTime(bookingDetails.booking_time);
     
@@ -47,7 +55,8 @@ function loadBookingDetails() {
         document.getElementById('booking-fee').textContent = `₱${bookingFee.toFixed(2)}`;
     }
     if (document.getElementById('total-price')) {
-        document.getElementById('total-price').textContent = `₱${totalAmount.toFixed(2)}`;
+        // By default (before user selects payment type), show the grand total
+        document.getElementById('total-price').textContent = `₱${grandTotal.toFixed(2)}`;
     }
 }
 
@@ -79,12 +88,13 @@ function getToken() {
     return localStorage.getItem('token');
 }
 
-// Cash payment option
+// Down payment option (10% via GCash)
 document.getElementById('cash-option').addEventListener('click', function() {
     this.classList.add('selected');
     document.getElementById('online-option').classList.remove('selected');
-    document.getElementById('online-details').classList.remove('active');
-    selectedPayment = 'CASH';
+    // Show GCash instructions/QR as well
+    document.getElementById('online-details').classList.add('active');
+    selectedPayment = 'CASH'; // still treated separately in logic, but UI is GCash-based
     selectedProvider = null;
     updateSubmitButton();
 });
@@ -112,17 +122,35 @@ document.querySelectorAll('.provider-btn').forEach(btn => {
 // Update submit button text
 function updateSubmitButton() {
     const submitBtn = document.getElementById('submit-btn');
+    const totalPriceEl = document.getElementById('total-price');
+    const servicePrice = bookingDetails ? parseFloat(bookingDetails.price) : 0;
+    const bookingFee = bookingDetails ? (bookingDetails.bookingFee || servicePrice * 0.10) : 0;
+    const grandTotal = bookingDetails ? (bookingDetails.grandTotal || (servicePrice + bookingFee)) : (servicePrice + bookingFee);
+    const downPaymentAmount = bookingDetails ? (bookingDetails.downPaymentAmount || (grandTotal * 0.20)) : (grandTotal * 0.20);
     
     if (selectedPayment === 'CASH') {
         submitBtn.disabled = false;
-        submitBtn.textContent = 'Confirm Booking (Pay Cash on Service Day)';
+        submitBtn.textContent = 'Upload GCash Receipt (Down Payment)';
+        if (totalPriceEl) {
+            // Show amount to pay now = 20% of (service price + booking fee)
+            totalPriceEl.textContent = `₱${downPaymentAmount.toFixed(2)}`;
+        }
     } else if (selectedPayment === 'ONLINE') {
         // Only GCash is supported
         submitBtn.disabled = false;
-        submitBtn.textContent = 'Upload GCash Receipt';
+        submitBtn.textContent = 'Upload GCash Receipt (Full Payment)';
+        if (totalPriceEl) {
+            // Show full amount = service price + booking fee
+            totalPriceEl.textContent = `₱${grandTotal.toFixed(2)}`;
+        }
     } else {
         submitBtn.disabled = true;
         submitBtn.textContent = 'Select Payment Method';
+        if (totalPriceEl) {
+            totalPriceEl.textContent = grandTotal
+                ? `₱${grandTotal.toFixed(2)}`
+                : '₱0.00';
+        }
     }
 }
 
@@ -135,15 +163,30 @@ document.getElementById('submit-btn').addEventListener('click', async function()
     }
 });
 
-// Process cash payment
+// Process down payment (10% booking fee) with GCash receipt
 async function processCashPayment() {
     const loadingEl = document.getElementById('loading');
     const submitBtn = document.getElementById('submit-btn');
-    
+    const fileInput = document.getElementById('receipt-file');
+
+    // Require receipt just like full GCash payment
+    if (!fileInput || !fileInput.files.length) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Receipt Required',
+            text: 'Please upload a screenshot/photo of your GCash receipt for the down payment.',
+            confirmButtonColor: '#3085d6'
+        });
+        return;
+    }
+
     loadingEl.classList.add('active');
     submitBtn.disabled = true;
 
     try {
+        const formData = new FormData();
+        formData.append('receipt', fileInput.files[0]);
+
         const response = await fetch(`${API_BASE_URL}/transactions/`, {
             method: 'POST',
             headers: {
@@ -155,7 +198,7 @@ async function processCashPayment() {
                 booking_date: bookingDetails.booking_date,
                 booking_time: bookingDetails.booking_time,
                 payment_method: 'CASH',
-                payment_type: 'FULL_PAYMENT'
+                payment_type: 'BOOKING_FEE'
             })
         });
 
@@ -163,6 +206,7 @@ async function processCashPayment() {
 
         if (data.success) {
             sessionStorage.removeItem('bookingDetails');
+            sessionStorage.setItem('bookingSuccess', 'Down payment confirmed! Please pay the remaining balance on service day. Pending admin approval.');
             sessionStorage.setItem('bookingSuccess', 'Booking confirmed! Please pay cash on service day. Pending admin approval.');
             window.location.href = 'bookedservices.html';
         } else {

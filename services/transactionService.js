@@ -1,6 +1,7 @@
 const transactionRepository = require('../repositories/transactionRepository');
 const bookingRepository = require('../repositories/bookingRepository');
 const serviceRepository = require('../repositories/serviceRepository');
+const { BOOKING_FEE_PERCENTAGE } = require('../utils/constant');
 
 class TransactionService {
   
@@ -25,8 +26,9 @@ class TransactionService {
     let paymentStatus = '';
 
     if (payment_type === 'BOOKING_FEE') {
-      // Pay 20% booking fee
-      bookingFee = servicePrice * 0.20;
+      // Pay configured booking fee percentage (e.g. 10%)
+      bookingFee = servicePrice * BOOKING_FEE_PERCENTAGE;
+
       remainingBalance = servicePrice - bookingFee;
       amountToPay = bookingFee;
 
