@@ -208,6 +208,7 @@
         tr.innerHTML = `
           <td>${escapeHtml(appt.client)}</td>
           <td>${escapeHtml(appt.service)}</td>
+          <td>${escapeHtml(formatDate(appt.createdAt || appt.created_at))}</td>
           <td>${escapeHtml(formatDate(appt.date))}</td>
           <td>${escapeHtml(formatTime(rawStartTime))} - ${escapeHtml(formatTime(rawEndTime))}</td>
           <td>${escapeHtml(appt.staff || '—')}</td>
@@ -941,6 +942,7 @@
           id: b.BOOKING_ID || b.id,
           client: b.client_name || b.CLIENT_NAME || b.USERNAME || 'Client',
           service: b.SERVICE_NAME || b.service || 'Service',
+          createdAt: b.created_at || b.CREATED_AT || null,
           date: b.BOOKING_DATE || b.booking_date || b.date || '',
           time: b.BOOKING_TIME || b.booking_time || b.time || '',
           staff: b.staff_name || b.STAFF_NAME || '',

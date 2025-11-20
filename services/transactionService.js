@@ -9,6 +9,16 @@ class TransactionService {
   async createBookingWithTransaction(data) {
     const { user_id, service_id, staff_id, booking_date, booking_time, payment_method, payment_type } = data;
 
+    // Prevent multiple bookings for the same service and date by the same user
+    const alreadyBooked = await bookingRepository.userHasBookingForServiceOnDate(
+      user_id,
+      service_id,
+      booking_date
+    );
+    if (alreadyBooked) {
+      throw new Error('You already have a booking for this service on this date');
+    }
+
     // Get service details (repository exposes findById)
     const service = await serviceRepository.findById(service_id);
 

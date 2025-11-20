@@ -126,10 +126,13 @@ const paymentController = {
         throw new ApiError(400, 'Invalid status. Must be either "paid" or "failed"');
       }
 
+      // Map external statuses to internal ENUM values
+      const internalStatus = status === 'paid' ? 'COMPLETED' : 'FAILED';
+
       // Update transaction payment status
       await promisifyQuery(
         'UPDATE transactions SET PAYMENT_STATUS = ? WHERE BOOKING_ID = ?',
-        [status, bookingId]
+        [internalStatus, bookingId]
       );
 
       // If payment is verified, update booking status to confirmed

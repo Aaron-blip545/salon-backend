@@ -62,12 +62,12 @@ body {
   border-bottom: 2px solid #fffaf6;
   padding-bottom: 3px;
 }
+
 .booking-section {
     text-align: center;
     margin: 40px 0;
 }
 
-/* Grid Layout */
 .booking-options {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); 
@@ -105,8 +105,8 @@ body {
 /* Button */
 .confirm-btn {
     padding: 10px;
-    background-color: #dfd8c5;
-    color: white;
+    background-color: #10b981; /* emerald */
+    color: #ffffff;
     font-weight: bold;
     border: none;
     border-radius: 8px;
@@ -118,7 +118,7 @@ body {
 }
 
 .confirm-btn:hover {
-    background-color: #3399ff;
+    background-color: #059669;
     transform: translateY(-5px);
 }
   
@@ -137,23 +137,22 @@ body {
     width: 100%;
 }
 
-/* Book button */
+/* Book button (same as above, keep green palette) */
 .confirm-btn {
     padding: 10px;
-    background-color: #4da6ff;
-    color: white;
+    background-color: #10b981;
+    color: #ffffff;
     font-weight: bold;
     border: none;
     border-radius: 8px;
     cursor: pointer;
     transition: 0.3s;
     width: 100%;
-    
 }
 
 .confirm-btn:hover {
-    background-color: #dfd8c5;
-     transform: translateY(-5px);
+    background-color: #059669;
+    transform: translateY(-5px);
 }
 /* Welcome Banner */
 .welcome-banner {
@@ -174,7 +173,7 @@ body {
     width: 100%;
     height: calc(100% + 150px); /* Extend video height to cover the gap */
     object-fit: cover;
-    border-bottom: 5px solid #4da6ff;
+    border-bottom: 5px solid #10b981;
 }
 
 .banner-overlay {
@@ -264,7 +263,7 @@ body {
   display: flex;
   margin:none;
   gap: 40px;
-  border-top: 5px solid #4da6ff;
+  border-top: 5px solid #10b981;
 }
 
 /* Left Section */
@@ -274,7 +273,7 @@ body {
 }
 
 .contact-info h2 {
-  color: #0066cc;
+  color: #065f46;
   margin-bottom: 15px;
 }
 
@@ -293,7 +292,7 @@ body {
 /* Right Section */
 .contact-form {
   flex: 1;
-  background: #eceae8;  
+  background: #ecfdf5;
   padding: 20px;
   border-radius: 8px;
   box-shadow: 0 2px 8px rgba(0,0,0,0.1);
@@ -323,8 +322,8 @@ body {
 }
 
 .contact-form button {
-  background: #b48a00;
-  color: white;
+  background: #10b981;
+  color: #ffffff;
   border: none;
   padding: 12px 20px;
   border-radius: 4px;
@@ -333,7 +332,7 @@ body {
 }
 
 .contact-form button:hover {
-  background: #8a6d00;
+  background: #059669;
 }
 
 /* Reviews Section */

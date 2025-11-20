@@ -252,6 +252,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         const rawEndTime = addMinutesToTime(rawStartTime, durationMinutes);
         time.textContent = `${formatTime(rawStartTime)} - ${formatTime(rawEndTime)}`;
 
+        // Booked At (booking creation timestamp)
+        const bookedAtTd = document.createElement('td');
+        const createdRaw = b.created_at || b.CREATED_AT || null;
+        bookedAtTd.textContent = createdRaw ? new Date(createdRaw).toLocaleString() : '-';
+
         // Total amount
         const total = document.createElement('td');
         const servicePriceVal = parseFloat(b.service_price || b.PRICE || 0) || 0;
@@ -299,15 +304,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Payment status label
         let paymentLabel = 'Pending';
         let paymentKey = 'pending';
-        const isFullyCleared = remainingVal <= 0;
 
         if (
-          isFullyCleared &&
-          (paymentStatusRaw.includes('PARTIAL') || !paymentStatusRaw || paymentStatusRaw.includes('PENDING'))
+          paymentStatusRaw === 'APPROVED' ||
+          paymentStatusRaw === 'PAID' ||
+          paymentStatusRaw === 'FULLY_PAID' ||
+          paymentStatusRaw === 'COMPLETED'
         ) {
-          paymentLabel = 'Approved';
-          paymentKey = 'approved';
-        } else if (paymentStatusRaw === 'APPROVED' || paymentStatusRaw === 'PAID' || paymentStatusRaw === 'FULLY_PAID') {
+          // Only treat as Approved when the underlying payment status is explicitly approved/paid/completed
           paymentLabel = 'Approved';
           paymentKey = 'approved';
         } else if (paymentStatusRaw.includes('PARTIAL')) {
@@ -411,6 +415,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         tr.appendChild(staffTd);
         tr.appendChild(date);
         tr.appendChild(time);
+        tr.appendChild(bookedAtTd);
         tr.appendChild(total);
         tr.appendChild(remainingTd);
         tr.appendChild(serviceStatusTd);
@@ -433,7 +438,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     console.error(err);
     tbody.innerHTML = '<tr><td colspan="7">Failed to load bookings.</td></tr>';
   }
-
 });
 
 // Helper: format time string (HH:MM or HH:MM:SS) to 12-hour AM/PM

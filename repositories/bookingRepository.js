@@ -52,6 +52,7 @@ const bookingRepository = {
         b.BOOKING_ID,
         b.BOOKING_DATE,
         b.BOOKING_TIME,
+        b.CREATED_AT as created_at,
         b.STATUS_NAME as booking_status,
         b.service_status,
         b.staff_id,
@@ -80,6 +81,20 @@ const bookingRepository = {
     return results;
   },
 
+  // Check if a user already has an active booking for a specific service on a given date
+  userHasBookingForServiceOnDate: async (user_id, service_id, booking_date) => {
+    const sql = `
+      SELECT COUNT(*) as count
+      FROM bookings
+      WHERE USER_ID = ?
+        AND SERVICE_ID = ?
+        AND BOOKING_DATE = ?
+        AND STATUS_NAME IN ('pending', 'pending_payment', 'confirmed')
+    `;
+    const rows = await promisifyQuery(sql, [user_id, service_id, booking_date]);
+    return rows[0].count > 0;
+  },
+
   // Find all bookings with full details (for admin)
   // Join only the most recent transaction per booking to avoid
   // duplicate rows when multiple transactions exist.
@@ -89,6 +104,7 @@ const bookingRepository = {
         b.BOOKING_ID,
         b.BOOKING_DATE,
         b.BOOKING_TIME,
+        b.CREATED_AT as created_at,
         b.STATUS_NAME as booking_status,
         COALESCE(b.service_status, 'waiting') as service_status,
         b.USER_ID,
@@ -159,6 +175,7 @@ const bookingRepository = {
         b.BOOKING_ID,
         b.BOOKING_DATE,
         b.BOOKING_TIME,
+        b.CREATED_AT as created_at,
         b.STATUS_NAME as booking_status,
         b.USER_ID,
         COALESCE(u.NAME, 'Guest') as client_name,

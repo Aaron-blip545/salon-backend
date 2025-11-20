@@ -6,6 +6,16 @@ const { BOOKING_STATUS, BUSINESS_HOURS } = require('../utils/constant');
 const bookingService = {
   // Create new booking
   createBooking: async ({ user_id, service_id, staff_id, booking_date, booking_time, status_name }) => {
+    // Prevent multiple bookings for the same service and date by the same user
+    const alreadyBooked = await bookingRepository.userHasBookingForServiceOnDate(
+      user_id,
+      service_id,
+      booking_date
+    );
+    if (alreadyBooked) {
+      throw new ApiError(409, 'You already have a booking for this service on this date');
+    }
+
     // Check if time slot is available for this staff
     const isAvailable = await bookingRepository.isTimeSlotAvailable(booking_date, booking_time, staff_id);
     if (!isAvailable) {
@@ -80,10 +90,28 @@ const bookingService = {
     // Update status with normalized status
     await bookingRepository.updateStatus(booking_id, normalizedStatus);
 
-    // If confirming the booking, also approve the payment
+    // If confirming the booking, also approve the payment BUT ONLY
+    // for FULLY PAID transactions. Down payment logic remains handled
+    // separately in updateServiceStatus when the service is completed.
     if (normalizedStatus === 'confirmed') {
       try {
-        await transactionRepository.updatePaymentStatus(booking_id, 'APPROVED');
+        const txn = await transactionRepository.getTransactionByBookingIdOnly(booking_id);
+        if (txn) {
+          const method = String(txn.PAYMENT_METHOD || '').toUpperCase();
+          const remainingRaw =
+            txn.REMAINING_BALANCE !== undefined
+              ? txn.REMAINING_BALANCE
+              : (txn.remaining_balance !== undefined ? txn.remaining_balance : 0);
+          const remaining = Number(remainingRaw) || 0;
+
+          const isFullPaymentMethod = method.includes('FULL');
+          const isZeroBalance = remaining <= 0;
+
+          // Only auto-approve when this is clearly a fully-paid transaction
+          if (isFullPaymentMethod || isZeroBalance) {
+            await transactionRepository.updatePaymentStatus(booking_id, 'COMPLETED');
+          }
+        }
       } catch (err) {
         console.error('Failed to update transaction payment status on confirm', { booking_id, err });
         // Do not block confirming the booking if transaction update fails.
@@ -140,8 +168,8 @@ const bookingService = {
         if (txn && String(txn.PAYMENT_METHOD).toUpperCase() === 'DOWN PAYMENT') {
           // Clear any remaining balance
           await transactionRepository.updateRemainingBalance(booking_id, 0);
-          // Mark payment as approved/fully paid for UI mapping
-          await transactionRepository.updatePaymentStatus(booking_id, 'APPROVED');
+          // Mark payment as fully paid/completed for UI mapping
+          await transactionRepository.updatePaymentStatus(booking_id, 'COMPLETED');
         }
       } catch (err) {
         console.error('Failed to update transaction on service completion', { booking_id, err });
