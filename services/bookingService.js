@@ -80,6 +80,16 @@ const bookingService = {
     // Update status with normalized status
     await bookingRepository.updateStatus(booking_id, normalizedStatus);
 
+    // If confirming the booking, also approve the payment
+    if (normalizedStatus === 'confirmed') {
+      try {
+        await transactionRepository.updatePaymentStatus(booking_id, 'APPROVED');
+      } catch (err) {
+        console.error('Failed to update transaction payment status on confirm', { booking_id, err });
+        // Do not block confirming the booking if transaction update fails.
+      }
+    }
+
     // If this is a cancellation, also mark any related transaction
     // as REJECTED so payment status is clear in user/admin views.
     if (normalizedStatus === 'canceled' || normalizedStatus === 'cancelled') {

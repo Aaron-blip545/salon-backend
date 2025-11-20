@@ -4,8 +4,17 @@
     <title>NFS</title>
     <link rel="stylesheet" href="loader.css" />
     <link rel="stylesheet" href="MainPage.css" />
+    <link href="https://fonts.googleapis.com/css2?family=Alex+Brush&family=Playfair+Display:wght@400;500&display=swap" rel="stylesheet">
 
-    <style type="text/css"></style>
+    <style type="text/css">
+      .navbar-hidden {
+        transform: translateY(-100%);
+        transition: transform 0.3s ease-in-out;
+      }
+      .navbar {
+        transition: transform 0.3s ease-in-out;
+      }
+    </style>
   </head>
   <body>
     <nav class="navbar">
@@ -29,10 +38,16 @@
 
     <!-- Welcome Banner -->
     <div class="welcome-banner" id="home">
-      <img src="images/welcomeimg.png" alt="Welcome Image" />
-      <div class="welcome-text">
-        <h1>Welcome to Nature's Foot Spa</h1>
-        <p>Relax, refresh, and rejuvenate with our signature treatments.</p>
+      <video autoplay loop muted playsinline>
+        <source src="video/bannerpage.mp4" type="video/mp4">
+        Your browser does not support the video tag.
+      </video>
+      <div class="banner-overlay">
+        <div class="spa-title">
+          <div class="spa-name">Nature Foot Spa</div>
+          <div class="spa-subtitle">WELLNESS</div>
+          <a href="#booking-sections" class="book-now-btn">Book Now</a>
+        </div>
       </div>
     </div>
 
@@ -333,5 +348,39 @@
 
       })();
     </script>
+  <script>
+    // Auto-hiding navigation bar
+    let lastScrollTop = 0;
+    const navbar = document.querySelector('.navbar');
+    let scrollTimer = null;
+
+    window.addEventListener('scroll', function() {
+      const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+      
+      // Clear the existing timer
+      if (scrollTimer) {
+        clearTimeout(scrollTimer);
+      }
+      
+      // Set a new timer to hide navbar after scrolling stops
+      scrollTimer = setTimeout(function() {
+        if (scrollTop === 0) {
+          // At the top of the page - hide navbar
+          navbar.classList.add('navbar-hidden');
+        } else {
+          // Not at the top - show navbar
+          navbar.classList.remove('navbar-hidden');
+        }
+      }, 150); // Small delay to prevent flickering
+      
+      // Update last scroll position
+      lastScrollTop = scrollTop;
+    });
+
+    // Initial check - hide navbar if at top when page loads
+    if (window.pageYOffset === 0) {
+      navbar.classList.add('navbar-hidden');
+    }
+  </script>
   </body>
 </html>

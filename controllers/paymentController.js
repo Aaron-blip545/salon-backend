@@ -217,6 +217,146 @@ const paymentController = {
     } catch (error) {
       next(error);
     }
+  },
+
+  // Process down payment (20% of total via GCash)
+  processDownPayment: async (req, res, next) => {
+    try {
+      const { bookingId } = req.params;
+      const { service_id } = req.body;
+      const userId = req.user.id;
+
+      // Verify booking exists and belongs to user
+      const booking = await promisifyQuery(
+        'SELECT * FROM bookings WHERE BOOKING_ID = ? AND USER_ID = ?',
+        [bookingId, userId]
+      );
+
+      if (booking.length === 0) {
+        throw new ApiError(404, 'Booking not found or access denied');
+      }
+
+      // Get service details
+      const service = await promisifyQuery(
+        'SELECT * FROM services WHERE SERVICE_ID = ?',
+        [service_id]
+      );
+
+      if (service.length === 0) {
+        throw new ApiError(404, 'Service not found');
+      }
+
+      const servicePrice = parseFloat(service[0].PRICE || 0);
+      const bookingFee = servicePrice * 0.10; // 10% booking fee
+      const grandTotal = servicePrice + bookingFee;
+      const downPaymentAmount = grandTotal * 0.20; // 20% down payment
+      const remainingBalance = grandTotal - downPaymentAmount;
+
+      // Create or update transaction with DOWN PAYMENT
+      const existingTransaction = await promisifyQuery(
+        'SELECT * FROM transactions WHERE BOOKING_ID = ?',
+        [bookingId]
+      );
+
+      if (existingTransaction.length === 0) {
+        // Create new transaction
+        await promisifyQuery(
+          `INSERT INTO transactions (BOOKING_ID, SERVICE_ID, USER_ID, AMOUNT, PRICE, DISCOUNT,
+           PAYMENT_METHOD, PAYMENT_STATUS, booking_fee, remaining_balance, TRANSACTION_REFERENCE, CREATED_AT) 
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+          [bookingId, service_id, userId, downPaymentAmount, servicePrice, 0,
+           'DOWN PAYMENT', 'PENDING', bookingFee, remainingBalance, `TXN-${Date.now()}-${bookingId}`]
+        );
+      } else {
+        // Update existing transaction
+        await promisifyQuery(
+          `UPDATE transactions SET PAYMENT_METHOD = ?, AMOUNT = ?, PRICE = ?, 
+           booking_fee = ?, remaining_balance = ?, PAYMENT_STATUS = ? WHERE BOOKING_ID = ?`,
+          ['DOWN PAYMENT', downPaymentAmount, servicePrice, bookingFee, remainingBalance, 'PENDING', bookingId]
+        );
+      }
+
+      res.json({
+        success: true,
+        message: 'Down payment initiated successfully',
+        data: {
+          amount: downPaymentAmount,
+          remaining_balance: remainingBalance,
+          payment_method: 'DOWN PAYMENT'
+        }
+      });
+    } catch (error) {
+      next(error);
+    }
+  },
+
+  // Process full payment (100% of total via GCash)
+  processFullPayment: async (req, res, next) => {
+    try {
+      const { bookingId } = req.params;
+      const { service_id } = req.body;
+      const userId = req.user.id;
+
+      // Verify booking exists and belongs to user
+      const booking = await promisifyQuery(
+        'SELECT * FROM bookings WHERE BOOKING_ID = ? AND USER_ID = ?',
+        [bookingId, userId]
+      );
+
+      if (booking.length === 0) {
+        throw new ApiError(404, 'Booking not found or access denied');
+      }
+
+      // Get service details
+      const service = await promisifyQuery(
+        'SELECT * FROM services WHERE SERVICE_ID = ?',
+        [service_id]
+      );
+
+      if (service.length === 0) {
+        throw new ApiError(404, 'Service not found');
+      }
+
+      const servicePrice = parseFloat(service[0].PRICE || 0);
+      const bookingFee = servicePrice * 0.10; // 10% booking fee
+      const grandTotal = servicePrice + bookingFee;
+
+      // Create or update transaction with FULLY PAID
+      const existingTransaction = await promisifyQuery(
+        'SELECT * FROM transactions WHERE BOOKING_ID = ?',
+        [bookingId]
+      );
+
+      if (existingTransaction.length === 0) {
+        // Create new transaction
+        await promisifyQuery(
+          `INSERT INTO transactions (BOOKING_ID, SERVICE_ID, USER_ID, AMOUNT, PRICE, DISCOUNT,
+           PAYMENT_METHOD, PAYMENT_STATUS, booking_fee, remaining_balance, TRANSACTION_REFERENCE, CREATED_AT) 
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+          [bookingId, service_id, userId, grandTotal, servicePrice, 0,
+           'FULLY PAID', 'PENDING', bookingFee, 0, `TXN-${Date.now()}-${bookingId}`]
+        );
+      } else {
+        // Update existing transaction
+        await promisifyQuery(
+          `UPDATE transactions SET PAYMENT_METHOD = ?, AMOUNT = ?, PRICE = ?, 
+           booking_fee = ?, remaining_balance = ?, PAYMENT_STATUS = ? WHERE BOOKING_ID = ?`,
+          ['FULLY PAID', grandTotal, servicePrice, bookingFee, 0, 'PENDING', bookingId]
+        );
+      }
+
+      res.json({
+        success: true,
+        message: 'Full payment initiated successfully',
+        data: {
+          amount: grandTotal,
+          remaining_balance: 0,
+          payment_method: 'FULLY PAID'
+        }
+      });
+    } catch (error) {
+      next(error);
+    }
   }
 };
 

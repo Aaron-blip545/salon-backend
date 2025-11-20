@@ -5,12 +5,18 @@
 }
 
 body {
-  font-family:'Times New Roman', Times, serif;
-  background-image: linear-gradient(120deg, #fdfbfb 0%, #ebedee 100%);}
+  background-color: white;
+  font-family: 'Merriweather', serif;
+  color: #333;
+  line-height: 1.6;
+  margin: 0;
+  padding: 0;
+  background-image: none;
+}
 
 /* Navigation Bar */
 .navbar {
-  background-image: linear-gradient(to right, #43e97b 0%, #38f9d7 100%); 
+  background-image: linear-gradient(to right, #4da6ff 0%, #80bfff 100%); 
   box-shadow: 0 2px 6px rgba(0,0,0,0.1);
   position: sticky;
   top: 0;
@@ -45,6 +51,7 @@ body {
 .navbar ul li a {
   text-decoration: none;
   font-size: 1rem;
+  font-weight: 700;
   color: #333;
   font-family: 'Merriweather', serif;
   transition: color 0.3s ease, border-bottom 0.3s ease;
@@ -111,7 +118,7 @@ body {
 }
 
 .confirm-btn:hover {
-    background-color: #c8bfa8;
+    background-color: #3399ff;
     transform: translateY(-5px);
 }
   
@@ -133,7 +140,7 @@ body {
 /* Book button */
 .confirm-btn {
     padding: 10px;
-    background-color: #71c071;
+    background-color: #4da6ff;
     color: white;
     font-weight: bold;
     border: none;
@@ -154,29 +161,100 @@ body {
     text-align: center;
     color: white;
     margin-bottom: 40px;
+    height: 700px; /* Increased from 600px to make video bigger */
+    overflow: hidden;
+    margin-top: -150px; /* Aggressive margin to ensure full coverage */
+    padding-top: 150px; /* Corresponding padding */
 }
 
-/* Banner image */
-.welcome-banner img {
-    width: 100%;
-    height: 450px;
-    object-fit:cover;
-    border-bottom: 5px solid #57c057;
-
-}
-.welcome-text {
+.welcome-banner video {
     position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    background: rgba(0, 0, 0, 0.5); 
-    padding: 20px 40px;
-    border-radius: 10px;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: calc(100% + 150px); /* Extend video height to cover the gap */
+    object-fit: cover;
+    border-bottom: 5px solid #4da6ff;
 }
 
-.welcome-text h1 {
-    font-size: 32px;
-    margin-bottom: 10px;
+.banner-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.1);
+}
+
+.spa-title {
+    text-align: center;
+    color: white;
+    transform: translateY(-20%);
+}
+
+.spa-name {
+    font-family: 'Alex Brush', cursive;
+    font-size: 7rem;
+    font-weight: 400;
+    line-height: 1;
+    color: white;
+    text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.3);
+    margin: 0;
+    padding: 0;
+    white-space: nowrap;
+}
+
+.spa-subtitle {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.2rem;
+    font-weight: 300;
+    letter-spacing: 8px;
+    text-transform: uppercase;
+    margin: 5px 0 20px 0;
+    color: white;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.book-now-btn {
+    display: inline-block;
+    padding: 12px 40px;
+    background-color: transparent;
+    color: white;
+    font-family: 'Playfair Display', serif;
+    font-size: 1rem;
+    font-weight: 400;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    text-decoration: none;
+    border: 2px solid white;
+    border-radius: 0;
+    transition: all 0.3s ease;
+    margin-top: 10px;
+    cursor: pointer;
+}
+
+.book-now-btn:hover {
+    background-color: white;
+    color: #333;
+    text-decoration: none;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .spa-name {
+        font-size: 3rem;
+        padding: 15px 30px;
+    }
+}
+
+@media (max-width: 480px) {
+    .spa-name {
+        font-size: 2.2rem;
+        padding: 10px 20px;
+    }
 }
 
 .welcome-text p {
@@ -186,7 +264,7 @@ body {
   display: flex;
   margin:none;
   gap: 40px;
-  border-top: 5px solid #57c057;
+  border-top: 5px solid #4da6ff;
 }
 
 /* Left Section */
@@ -196,7 +274,7 @@ body {
 }
 
 .contact-info h2 {
-  color: #57c057;
+  color: #0066cc;
   margin-bottom: 15px;
 }
 

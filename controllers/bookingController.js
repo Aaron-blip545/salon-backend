@@ -32,37 +32,6 @@ const bookingController = {
         status_name: 'pending_payment' // New status to indicate payment is pending
       });
 
-      // Get service details to calculate transaction amounts
-      const service = await serviceRepository.findById(service_id);
-      if (!service) {
-        throw new ApiError(404, 'Service not found');
-      }
-
-      const servicePrice = parseFloat(service.PRICE || service.price || 0);
-      const paymentMethodUsed = payment_method || 'cash';
-
-      // Create a corresponding transaction record so admin panel can see payment method
-      try {
-        await transactionRepository.createTransaction({
-          booking_id: result.booking_id,
-          user_id,
-          service_id,
-          amount: servicePrice,
-          price: servicePrice,
-          booking_fee: 0,
-          remaining_balance: 0,
-          // At booking creation time we only know that payment is not yet complete,
-          // so store it as a down payment type for the enum column
-          payment_method: 'DOWN PAYMENT',
-          payment_status: paymentMethodUsed.toLowerCase() === 'cash' ? 'PENDING' : 'PENDING'
-        });
-        console.log('✅ Transaction created successfully for booking:', result.booking_id);
-      } catch (txnError) {
-        console.error('❌ Could not create transaction record:', txnError);
-        console.error('Transaction data:', { booking_id: result.booking_id, user_id, service_id, amount: servicePrice, payment_method: paymentMethodUsed });
-        // Don't fail the booking if transaction creation fails, just log it
-      }
-
       // Return payment URL in the response
       res.status(201).json({
         success: true,

@@ -5,6 +5,8 @@ const { authenticateToken, requireRole } = require('../middleware/auth');
 
 // Protected routes (require authentication)
 router.get('/:bookingId', authenticateToken, paymentController.getPaymentDetails);
+router.post('/:bookingId/down-payment', authenticateToken, paymentController.processDownPayment);
+router.post('/:bookingId/full-payment', authenticateToken, paymentController.processFullPayment);
 router.post('/:bookingId/receipt', authenticateToken, paymentController.uploadReceipt);
 
 // Admin routes

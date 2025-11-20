@@ -163,7 +163,7 @@ document.getElementById('submit-btn').addEventListener('click', async function()
     }
 });
 
-// Process down payment (10% booking fee) with GCash receipt
+// Process down payment (20% of total) with GCash receipt
 async function processCashPayment() {
     const loadingEl = document.getElementById('loading');
     const submitBtn = document.getElementById('submit-btn');
@@ -180,12 +180,22 @@ async function processCashPayment() {
         return;
     }
 
+    if (!bookingDetails || !bookingDetails.booking_id) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Missing Information',
+            text: 'Missing booking information. Please re-book the service.',
+            confirmButtonColor: '#d33'
+        });
+        return;
+    }
+
     loadingEl.classList.add('active');
     submitBtn.disabled = true;
 
     try {
-        // 1) Create booking + transaction via JSON
-        const createResponse = await fetch(`${API_BASE_URL}/transactions/`, {
+        // 1) Create/Update transaction with DOWN_PAYMENT type
+        const txnResponse = await fetch(`${API_BASE_URL}/payments/${bookingDetails.booking_id}/down-payment`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -193,45 +203,32 @@ async function processCashPayment() {
             },
             body: JSON.stringify({
                 service_id: bookingDetails.service_id,
-                staff_id: bookingDetails.staff_id,
-                booking_date: bookingDetails.booking_date,
-                booking_time: bookingDetails.booking_time,
-                payment_method: 'CASH',
-                payment_type: 'BOOKING_FEE'
+                booking_id: bookingDetails.booking_id
             })
         });
 
-        const createData = await createResponse.json();
+        const txnData = await txnResponse.json();
 
-        if (!createResponse.ok || !createData.success) {
-            throw new Error(createData.message || 'Failed to create booking');
+        if (!txnResponse.ok || !txnData.success) {
+            throw new Error(txnData.message || 'Failed to process payment');
         }
 
-        // Extract booking_id from response (supports different shapes)
-        const bookingFromResp = createData.data && (createData.data.booking || createData.data.BOOKING || {});
-        const bookingId =
-            (bookingFromResp && (bookingFromResp.BOOKING_ID || bookingFromResp.booking_id)) ||
-            createData.data.booking_id ||
-            createData.data.BOOKING_ID;
+        // 2) Upload receipt image
+        const uploadForm = new FormData();
+        uploadForm.append('receipt', fileInput.files[0]);
 
-        // 2) Upload receipt image tied to this booking, so admin panel can show proof
-        if (bookingId) {
-            const uploadForm = new FormData();
-            uploadForm.append('receipt', fileInput.files[0]);
+        const uploadResponse = await fetch(`${API_BASE_URL}/payments/${bookingDetails.booking_id}/receipt`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${getToken()}`
+            },
+            body: uploadForm
+        });
 
-            const uploadResponse = await fetch(`${API_BASE_URL}/payments/${bookingId}/receipt`, {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${getToken()}`
-                },
-                body: uploadForm
-            });
+        const uploadData = await uploadResponse.json();
 
-            const uploadData = await uploadResponse.json();
-
-            if (!uploadResponse.ok || !uploadData.success) {
-                throw new Error(uploadData.message || 'Failed to upload receipt');
-            }
+        if (!uploadResponse.ok || !uploadData.success) {
+            throw new Error(uploadData.message || 'Failed to upload receipt');
         }
 
         sessionStorage.removeItem('bookingDetails');
@@ -251,7 +248,7 @@ async function processCashPayment() {
     }
 }
 
-// Process GCash payment: upload receipt for existing booking
+// Process full GCash payment: create transaction with FULL_PAYMENT type and upload receipt
 async function processGCashPayment() {
     const loadingEl = document.getElementById('loading');
     const submitBtn = document.getElementById('submit-btn');
@@ -267,8 +264,6 @@ async function processGCashPayment() {
         return;
     }
 
-    const file = fileInput.files[0];
-
     if (!bookingDetails || !bookingDetails.booking_id) {
         Swal.fire({
             icon: 'error',
@@ -283,27 +278,47 @@ async function processGCashPayment() {
     submitBtn.disabled = true;
 
     try {
-        const formData = new FormData();
-        formData.append('receipt', file);
+        // 1) Create/Update transaction with FULL_PAYMENT type
+        const txnResponse = await fetch(`${API_BASE_URL}/payments/${bookingDetails.booking_id}/full-payment`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${getToken()}`
+            },
+            body: JSON.stringify({
+                service_id: bookingDetails.service_id,
+                booking_id: bookingDetails.booking_id
+            })
+        });
 
-        const response = await fetch(`${API_BASE_URL}/payments/${bookingDetails.booking_id}/receipt`, {
+        const txnData = await txnResponse.json();
+
+        if (!txnResponse.ok || !txnData.success) {
+            throw new Error(txnData.message || 'Failed to process payment');
+        }
+
+        // 2) Upload receipt image
+        const uploadForm = new FormData();
+        uploadForm.append('receipt', fileInput.files[0]);
+
+        const uploadResponse = await fetch(`${API_BASE_URL}/payments/${bookingDetails.booking_id}/receipt`, {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${getToken()}`
             },
-            body: formData
+            body: uploadForm
         });
 
-        const data = await response.json();
+        const uploadData = await uploadResponse.json();
 
-        if (!response.ok || !data.success) {
-            throw new Error(data.message || 'Failed to upload receipt');
+        if (!uploadResponse.ok || !uploadData.success) {
+            throw new Error(uploadData.message || 'Failed to upload receipt');
         }
 
         sessionStorage.removeItem('bookingDetails');
         sessionStorage.setItem(
             'bookingSuccess',
-            'GCash payment receipt uploaded successfully. Your payment will be verified by the admin.'
+            'Full payment confirmed! Your booking is pending admin approval.'
         );
         window.location.href = 'bookedservices.html';
     } catch (error) {
