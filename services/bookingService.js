@@ -1,4 +1,5 @@
 const bookingRepository = require('../repositories/bookingRepository');
+const transactionRepository = require('../repositories/transactionRepository');
 const ApiError = require('../utils/ApiError');
 const { BOOKING_STATUS, BUSINESS_HOURS } = require('../utils/constant');
 
@@ -78,7 +79,18 @@ const bookingService = {
     }
     // Update status with normalized status
     await bookingRepository.updateStatus(booking_id, normalizedStatus);
-    
+
+    // If this is a cancellation, also mark any related transaction
+    // as REJECTED so payment status is clear in user/admin views.
+    if (normalizedStatus === 'canceled' || normalizedStatus === 'cancelled') {
+      try {
+        await transactionRepository.updatePaymentStatus(booking_id, 'REJECTED');
+      } catch (err) {
+        console.error('Failed to update transaction payment status on cancel', { booking_id, err });
+        // Do not block cancelling the booking if transaction update fails.
+      }
+    }
+
     return {
       message: 'Booking status updated successfully'
     };
@@ -107,9 +119,24 @@ const bookingService = {
     // Update service status
     await bookingRepository.updateServiceStatus(booking_id, service_status);
     
-    // If marking as completed, also update booking status to completed
+    // If marking as completed, also update booking status and any
+    // related DOWN PAYMENT transaction so the remaining balance is
+    // cleared and payment is treated as fully paid.
     if (service_status === 'completed') {
       await bookingRepository.updateStatus(booking_id, 'completed');
+
+      try {
+        const txn = await transactionRepository.getTransactionByBookingIdOnly(booking_id);
+        if (txn && String(txn.PAYMENT_METHOD).toUpperCase() === 'DOWN PAYMENT') {
+          // Clear any remaining balance
+          await transactionRepository.updateRemainingBalance(booking_id, 0);
+          // Mark payment as approved/fully paid for UI mapping
+          await transactionRepository.updatePaymentStatus(booking_id, 'APPROVED');
+        }
+      } catch (err) {
+        console.error('Failed to update transaction on service completion', { booking_id, err });
+        // Do not block service completion if transaction update fails
+      }
     }
     
     return {

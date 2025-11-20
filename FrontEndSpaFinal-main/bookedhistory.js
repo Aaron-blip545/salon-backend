@@ -12,6 +12,49 @@ function formatTime(timeString) {
   return `${displayHour}:${minute} ${meridiem}`;
 }
 
+// Parse service duration into minutes (same logic as bookedservices.js)
+function getDurationMinutes(rawDuration) {
+  if (!rawDuration) return 60;
+  const rawStr = String(rawDuration).trim();
+
+  // If looks like time HH:MM or HH:MM:SS
+  if (/^\d{1,2}:\d{2}(:\d{2})?$/.test(rawStr)) {
+    const parts = rawStr.split(':');
+    const h = parseInt(parts[0], 10) || 0;
+    const m = parseInt(parts[1], 10) || 0;
+    return h * 60 + m;
+  }
+
+  const match = rawStr.match(/(\d+)/);
+  if (!match) return 60;
+
+  const num = parseInt(match[1], 10) || 60;
+  if (/hour|hr/i.test(rawStr)) {
+    return num * 60;
+  }
+  if (!/min/i.test(rawStr) && num <= 12) {
+    // small integer without 'min' => assume hours
+    return num * 60;
+  }
+  return num; // treat as minutes
+}
+
+// Add minutes to a HH:MM or HH:MM:SS time string and return HH:MM.
+function addMinutesToTime(timeString, minutesToAdd) {
+  if (!timeString) return '';
+  const parts = timeString.split(':');
+  if (parts.length < 2) return timeString;
+  const h = parseInt(parts[0], 10) || 0;
+  const m = parseInt(parts[1], 10) || 0;
+  let totalMinutes = h * 60 + m + (minutesToAdd || 0);
+  if (totalMinutes < 0) totalMinutes = 0;
+  const endHour = Math.floor(totalMinutes / 60);
+  const endMin = totalMinutes % 60;
+  const hh = String(endHour).padStart(2, '0');
+  const mm = String(endMin).padStart(2, '0');
+  return `${hh}:${mm}`;
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
   const token = localStorage.getItem('token');
   const table = document.querySelector('table');
@@ -159,31 +202,67 @@ document.addEventListener('DOMContentLoaded', async () => {
         date.textContent = new Date(b.BOOKING_DATE || b.booking_date).toLocaleDateString();
 
         const time = document.createElement('td');
-        time.textContent = formatTime(b.BOOKING_TIME || b.booking_time || '');
+        const rawStartTime = (b.BOOKING_TIME || b.booking_time || '').toString();
+        const durationMinutes = getDurationMinutes(b.service_duration || b.DURATION);
+        const rawEndTime = addMinutesToTime(rawStartTime, durationMinutes);
+        time.textContent = `${formatTime(rawStartTime)} - ${formatTime(rawEndTime)}`;
 
         const total = document.createElement('td');
-        const priceVal = parseFloat(b.service_price || b.transaction_price || b.PRICE || 0) || 0;
-        total.textContent = `₱${priceVal.toFixed(2)}`;
+        const servicePriceVal = parseFloat(b.service_price || b.PRICE || 0) || 0;
+        const bookingFeeVal = parseFloat(b.booking_fee || b.BOOKING_FEE || 0) || 0;
+        const totalVal = servicePriceVal + bookingFeeVal;
+        const displayTotal = totalVal > 0 ? totalVal : (parseFloat(b.transaction_price || 0) || 0);
+        total.textContent = `₱${displayTotal.toFixed(2)}`;
 
-        const balanceTd = document.createElement('td');
+        const remainingTd = document.createElement('td');
         const remainingVal = parseFloat(b.remaining_balance || b.REMAINING_BALANCE || 0) || 0;
-        balanceTd.textContent = remainingVal > 0 ? `₱${remainingVal.toFixed(2)}` : '₱0.00';
+        remainingTd.textContent = remainingVal > 0 ? `₱${remainingVal.toFixed(2)}` : '₱0.00';
 
         const bookingStatusRaw = (b.booking_status || b.STATUS_NAME || b.status_name || '').toUpperCase();
+        const serviceStatusRaw = (b.service_status || b.SERVICE_STATUS || '').toUpperCase();
         const paymentStatusRaw = (b.payment_status || b.PAYMENT_STATUS || '').toUpperCase();
 
         const serviceStatusTd = document.createElement('td');
-        serviceStatusTd.textContent = bookingStatusRaw || '-';
+        let serviceLabel = '-';
+        let statusForService = serviceStatusRaw || bookingStatusRaw;
+        // If booking_status is completed/cancelled, treat that as final state
+        if (
+          bookingStatusRaw === 'COMPLETED' ||
+          bookingStatusRaw === 'CANCELLED' ||
+          bookingStatusRaw === 'CANCELED'
+        ) {
+          statusForService = bookingStatusRaw;
+        }
+        if (statusForService === 'PENDING' || statusForService === 'PENDING_PAYMENT') {
+          serviceLabel = 'Pending';
+        } else if (statusForService === 'WAITING' || statusForService === 'CONFIRMED') {
+          serviceLabel = 'Waiting';
+        } else if (statusForService === 'ARRIVED' || statusForService === 'IN_PROGRESS') {
+          serviceLabel = 'In Progress';
+        } else if (statusForService === 'COMPLETED') {
+          serviceLabel = 'Completed';
+        } else if (statusForService === 'CANCELLED' || statusForService === 'CANCELED') {
+          serviceLabel = 'Cancelled';
+        }
+        serviceStatusTd.textContent = serviceLabel;
 
-        let paymentLabel = paymentStatusRaw || '-';
-        let paymentKey = '';
-        if (paymentStatusRaw.includes('PARTIAL')) {
-          paymentLabel = 'Partial Pending';
-          paymentKey = 'partial';
+        let paymentLabel = 'Pending';
+        let paymentKey = 'pending';
+        const isFullyCleared = remainingVal <= 0;
+
+        if (
+          isFullyCleared &&
+          (paymentStatusRaw.includes('PARTIAL') || !paymentStatusRaw || paymentStatusRaw.includes('PENDING'))
+        ) {
+          paymentLabel = 'Approved';
+          paymentKey = 'approved';
         } else if (paymentStatusRaw === 'APPROVED' || paymentStatusRaw === 'PAID' || paymentStatusRaw === 'FULLY_PAID') {
           paymentLabel = 'Approved';
           paymentKey = 'approved';
-        } else if (paymentStatusRaw === 'PENDING') {
+        } else if (paymentStatusRaw.includes('PARTIAL')) {
+          paymentLabel = 'Partial Pending';
+          paymentKey = 'partial';
+        } else if (!paymentStatusRaw || paymentStatusRaw.includes('PENDING')) {
           paymentLabel = 'Pending';
           paymentKey = 'pending';
         } else if (paymentStatusRaw === 'REJECTED' || paymentStatusRaw === 'FAILED') {
@@ -198,68 +277,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         const actionTd = document.createElement('td');
-        const deleteBtn = document.createElement('button');
-        deleteBtn.className = 'cancel-btn';
-        deleteBtn.textContent = 'Delete';
-        deleteBtn.addEventListener('click', async () => {
-          const res = await Swal.fire({
-            title: 'Delete History?',
-            text: 'This will permanently delete this booking record.',
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: '#d33',
-            cancelButtonColor: '#3085d6',
-            confirmButtonText: 'Yes, delete it',
-            cancelButtonText: 'No, keep it'
-          });
-          if (!res.isConfirmed) return;
-
-          try {
-            const id = b.BOOKING_ID || b.booking_id;
-            if (!id) throw new Error('Missing booking ID');
-
-            deleteBtn.disabled = true;
-            deleteBtn.textContent = 'Deleting...';
-
-            const delResp = await fetch(`${API_BASE}/bookings/${id}`, {
-              method: 'DELETE',
-              headers: { 'Authorization': `Bearer ${token}` }
-            });
-            const delJson = await delResp.json();
-            if (!delResp.ok || !delJson.success) {
-              throw new Error(delJson.message || 'Failed to delete history');
-            }
-
-            // Remove from local array and re-render
-            allBookings = allBookings.filter((bk) => (bk.BOOKING_ID || bk.booking_id) !== id);
-            renderHistory(searchInput ? searchInput.value || '' : '');
-
-            Swal.fire({
-              icon: 'success',
-              title: 'Deleted',
-              text: 'Booking history entry deleted.',
-              confirmButtonColor: '#3085d6'
-            });
-          } catch (err) {
-            console.error(err);
-            Swal.fire({
-              icon: 'error',
-              title: 'Error',
-              text: err.message || 'Failed to delete history.',
-              confirmButtonColor: '#d33'
-            });
-            deleteBtn.disabled = false;
-            deleteBtn.textContent = 'Delete';
-          }
-        });
-        actionTd.appendChild(deleteBtn);
+        // History is read-only: no actions, show dash
+        actionTd.textContent = '-';
 
         tr.appendChild(svc);
         tr.appendChild(staffTd);
         tr.appendChild(date);
         tr.appendChild(time);
         tr.appendChild(total);
-        tr.appendChild(balanceTd);
+        tr.appendChild(remainingTd);
         tr.appendChild(serviceStatusTd);
         tr.appendChild(paymentStatusTd);
         tr.appendChild(actionTd);

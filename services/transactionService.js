@@ -7,7 +7,7 @@ class TransactionService {
   
   // Create booking with transaction
   async createBookingWithTransaction(data) {
-    const { user_id, service_id, booking_date, booking_time, payment_method, payment_type } = data;
+    const { user_id, service_id, staff_id, booking_date, booking_time, payment_method, payment_type } = data;
 
     // Get service details (repository exposes findById)
     const service = await serviceRepository.findById(service_id);
@@ -16,29 +16,42 @@ class TransactionService {
       throw new Error('Service not found');
     }
 
+    // Map payment_type to DB PAYMENT_METHOD enum
+    // Column is now ENUM('DOWN PAYMENT', 'FULLY PAID')
+    const paymentMethodForDb = payment_type === 'BOOKING_FEE'
+      ? 'DOWN PAYMENT'
+      : 'FULLY PAID';
+
     // service object comes from DB and uses uppercase column names (e.g. PRICE, SERVICE_NAME)
     const servicePrice = parseFloat(service.PRICE || service.price || 0);
 
-    // Calculate amounts based on payment type
+    // Calculate amounts based on payment type, matching frontend logic
+    // bookingFee = 10% of service price
+    // grandTotal = service price + booking fee
+    // - For down payment: amountToPay = 20% of grandTotal, remainingBalance = 80% of grandTotal
+    // - For full payment: amountToPay = 100% of grandTotal, remainingBalance = 0
+
     let bookingFee = 0;
     let remainingBalance = 0;
     let amountToPay = 0;
     let paymentStatus = '';
 
     if (payment_type === 'BOOKING_FEE') {
-      // Pay configured booking fee percentage (e.g. 10%)
       bookingFee = servicePrice * BOOKING_FEE_PERCENTAGE;
+      const grandTotal = servicePrice + bookingFee;
 
-      remainingBalance = servicePrice - bookingFee;
-      amountToPay = bookingFee;
+      amountToPay = grandTotal * 0.20;       // 20% of (service + fee)
+      // Store the remaining amount (80%) in REMAINING_BALANCE so BALANCE = total - downPayment
+      remainingBalance = grandTotal - amountToPay;
 
       paymentStatus = payment_method === 'CASH' ? 'PARTIAL_PENDING' : 'PARTIAL_PAID';
 
     } else if (payment_type === 'FULL_PAYMENT') {
-      // Pay full amount
-      bookingFee = 0;
+      bookingFee = servicePrice * BOOKING_FEE_PERCENTAGE;
+      const grandTotal = servicePrice + bookingFee;
+
+      amountToPay = grandTotal;              // pay everything now
       remainingBalance = 0;
-      amountToPay = servicePrice;
 
       paymentStatus = payment_method === 'CASH' ? 'PENDING' : 'COMPLETED';
 
@@ -50,13 +63,14 @@ class TransactionService {
     const result = await transactionRepository.createBookingWithTransaction({
       user_id,
       service_id,
+      staff_id,
       booking_date,
       booking_time,
       amount: amountToPay,
       price: servicePrice,
       booking_fee: bookingFee,
       remaining_balance: remainingBalance,
-      payment_method,
+      payment_method: paymentMethodForDb,
       payment_status: paymentStatus
     });
 

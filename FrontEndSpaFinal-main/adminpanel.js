@@ -68,11 +68,19 @@
     tableBody.innerHTML = recentBookings.map(appt => {
       const statusClass = (appt.status || 'pending').toLowerCase();
       const statusText = capitalizeFirst(appt.status || 'pending');
-      const paymentMethodLabel = appt.paymentMethod
-        ? (String(appt.paymentMethod).toUpperCase() === 'GCASH'
-            ? 'GCash'
-            : capitalizeFirst(String(appt.paymentMethod).toLowerCase()))
-        : '—';
+
+      // Derive a human-friendly payment type label from PAYMENT_METHOD
+      // e.g. ENUM('DOWN PAYMENT', 'FULLY PAID') -> 'Down Payment' / 'Full Payment'
+      const rawMethod = (appt.paymentMethod || appt.payment_method || '').toString().toUpperCase();
+      let paymentMethodLabel = '—';
+      if (rawMethod.includes('DOWN')) {
+        paymentMethodLabel = 'Down Payment';
+      } else if (rawMethod.includes('FULL')) {
+        paymentMethodLabel = 'Full Payment';
+      } else if (rawMethod) {
+        // Fallback: capitalize the raw method
+        paymentMethodLabel = capitalizeFirst(rawMethod.toLowerCase());
+      }
       
       // Service status badge
       const serviceStatus = appt.serviceStatus || appt.service_status || 'waiting';
@@ -94,16 +102,21 @@
           serviceStatusBadge = '<span class="service-badge waiting">⏱️ Waiting</span>';
       }
       
+      // Compute time range using service duration, similar to bookedservices.js
+      const rawStartTime = (appt.time || appt.BOOKING_TIME || '').toString();
+      const durationMinutes = getDurationMinutes(appt.serviceDuration || appt.DURATION || appt.service_duration);
+      const rawEndTime = addMinutesToTime(rawStartTime, durationMinutes);
+
       return `
         <tr>
           <td>${escapeHtml(appt.client)}</td>
           <td>${escapeHtml(appt.service)}</td>
           <td>${escapeHtml(formatDate(appt.date))}</td>
-          <td>${escapeHtml(formatTime(appt.time))}</td>
+          <td>${escapeHtml(formatTime(rawStartTime))} - ${escapeHtml(formatTime(rawEndTime))}</td>
           <td>${escapeHtml(appt.staff)}</td>
           <td><span class="badge badge-${statusClass}">${statusText}</span></td>
           <td>${serviceStatusBadge}</td>
-          <td><span class="badge badge-${paymentMethodLabel.toLowerCase().replace(' ', '-')}">${paymentMethodLabel}</span></td>
+          <td><span class="badge badge-${paymentMethodLabel.toLowerCase().replace(/\s+/g, '-')}">${paymentMethodLabel}</span></td>
         </tr>
       `;
     }).join('');
@@ -128,11 +141,16 @@
         const statusClass = (appt.status || 'pending').toLowerCase();
         const statusText = capitalizeFirst(appt.status || 'pending');
 
-        const paymentMethodLabel = appt.paymentMethod
-          ? (String(appt.paymentMethod).toUpperCase() === 'GCASH'
-              ? 'GCash'
-              : capitalizeFirst(String(appt.paymentMethod).toLowerCase()))
-          : '—';
+        // Derive payment type label as in dashboard (Down Payment / Full Payment)
+        const rawMethod = (appt.paymentMethod || appt.payment_method || '').toString().toUpperCase();
+        let paymentMethodLabel = '—';
+        if (rawMethod.includes('DOWN')) {
+          paymentMethodLabel = 'Down Payment';
+        } else if (rawMethod.includes('FULL')) {
+          paymentMethodLabel = 'Full Payment';
+        } else if (rawMethod) {
+          paymentMethodLabel = capitalizeFirst(rawMethod.toLowerCase());
+        }
 
         const paymentMethodRaw = (appt.paymentMethod || '').toString().toLowerCase();
         let paymentProofHtml = '<span class="muted" style="font-size:12px;">No proof</span>';
@@ -182,11 +200,16 @@
             serviceStatusBadge = '<span class="service-badge waiting">⏱️ Waiting</span>';
         }
         
+        // Compute time range using service duration, similar to bookedservices.js
+        const rawStartTime = (appt.time || appt.BOOKING_TIME || '').toString();
+        const durationMinutes = getDurationMinutes(appt.serviceDuration || appt.DURATION || appt.service_duration);
+        const rawEndTime = addMinutesToTime(rawStartTime, durationMinutes);
+
         tr.innerHTML = `
           <td>${escapeHtml(appt.client)}</td>
           <td>${escapeHtml(appt.service)}</td>
           <td>${escapeHtml(formatDate(appt.date))}</td>
-          <td>${escapeHtml(formatTime(appt.time))}</td>
+          <td>${escapeHtml(formatTime(rawStartTime))} - ${escapeHtml(formatTime(rawEndTime))}</td>
           <td>${escapeHtml(appt.staff || '—')}</td>
           <td><span class="badge ${statusClass}">${statusText}</span></td>
           <td>${serviceStatusBadge}</td>
@@ -634,7 +657,7 @@
         return;
       }
       
-      // Persist to database first
+      // Persist service_status to database first
       const response = await fetch(`http://localhost:3000/api/bookings/${bookingId}/service-status`, {
         method: 'PATCH',
         headers: { 'Authorization': 'Bearer ' + getAuthToken(), 'Content-Type': 'application/json' },
@@ -646,10 +669,17 @@
         throw new Error(error.message || 'Failed to update status');
       }
       
-      // Update local state after successful database update
+      // Also update the main booking status to 'completed' so the slot is freed
+      try {
+        await updateBookingStatus(bookingId, 'completed');
+      } catch (statusErr) {
+        console.error('Error updating booking status to completed:', statusErr);
+      }
+
+      // Update local state after successful database updates
       appt.serviceStatus = 'completed';
       appt.service_status = 'completed';
-      appt.status = 'completed'; // Also update booking status
+      appt.status = 'completed';
       
       // Update UI
       renderAppointments();
@@ -808,6 +838,50 @@
     }
   }
 
+  // Parse service duration into minutes.
+  // Mirrors the logic in bookedservices.js so time ranges match.
+  function getDurationMinutes(rawDuration) {
+    if (!rawDuration) return 60;
+    const rawStr = String(rawDuration).trim();
+
+    // If looks like time HH:MM or HH:MM:SS
+    if (/^\d{1,2}:\d{2}(:\d{2})?$/.test(rawStr)) {
+      const parts = rawStr.split(':');
+      const h = parseInt(parts[0], 10) || 0;
+      const m = parseInt(parts[1], 10) || 0;
+      return h * 60 + m;
+    }
+
+    const match = rawStr.match(/(\d+)/);
+    if (!match) return 60;
+
+    const num = parseInt(match[1], 10) || 60;
+    if (/hour|hr/i.test(rawStr)) {
+      return num * 60;
+    }
+    if (!/min/i.test(rawStr) && num <= 12) {
+      // small integer without 'min' => assume hours
+      return num * 60;
+    }
+    return num; // treat as minutes
+  }
+
+  // Add minutes to a HH:MM or HH:MM:SS time string and return HH:MM.
+  function addMinutesToTime(timeString, minutesToAdd) {
+    if (!timeString) return '';
+    const parts = timeString.split(':');
+    if (parts.length < 2) return timeString;
+    const h = parseInt(parts[0], 10) || 0;
+    const m = parseInt(parts[1], 10) || 0;
+    let totalMinutes = h * 60 + m + (minutesToAdd || 0);
+    if (totalMinutes < 0) totalMinutes = 0;
+    const endHour = Math.floor(totalMinutes / 60);
+    const endMin = totalMinutes % 60;
+    const hh = String(endHour).padStart(2, '0');
+    const mm = String(endMin).padStart(2, '0');
+    return `${hh}:${mm}`;
+  }
+
   // Currency formatting for Philippine Peso
   function formatCurrency(amount){
     try{
@@ -863,25 +937,117 @@
       const payload = Array.isArray(result) ? result : (result && result.data ? result.data : []);
       
       if(Array.isArray(payload)){
-        appointments = payload.map((b)=>{
-          const mapped = {
-            id: b.BOOKING_ID || b.id,
-            client: b.client_name || b.CLIENT_NAME || b.USERNAME || 'Client',
-            service: b.SERVICE_NAME || b.service || 'Service',
-            date: b.BOOKING_DATE || b.booking_date || b.date || '',
-            time: b.BOOKING_TIME || b.booking_time || b.time || '',
-            staff: b.staff_name || b.STAFF_NAME || '',
-            status: normalizeStatus(b.booking_status || b.STATUS || b.status || b.status_name || 'pending'),
-            serviceStatus: b.service_status || 'waiting',
-            price: parseFloat(b.service_price || b.PRICE || b.price || 0),
-            paymentStatus: (b.PAYMENT_STATUS || b.payment_status || 'pending').toLowerCase(),
-            paymentMethod: b.PAYMENT_METHOD || b.payment_method || null,
-            receiptImage: b.RECEIPT_IMAGE || b.receipt_image || null
-          };
-          return mapped;
+        const mapped = payload.map((b)=>({
+          id: b.BOOKING_ID || b.id,
+          client: b.client_name || b.CLIENT_NAME || b.USERNAME || 'Client',
+          service: b.SERVICE_NAME || b.service || 'Service',
+          date: b.BOOKING_DATE || b.booking_date || b.date || '',
+          time: b.BOOKING_TIME || b.booking_time || b.time || '',
+          staff: b.staff_name || b.STAFF_NAME || '',
+          status: normalizeStatus(b.booking_status || b.STATUS || b.status || b.status_name || 'pending'),
+          serviceStatus: b.service_status || 'waiting',
+          price: parseFloat(b.service_price || b.PRICE || b.price || 0),
+          paymentStatus: (b.PAYMENT_STATUS || b.payment_status || 'pending').toUpperCase(),
+          paymentMethod: b.PAYMENT_METHOD || b.payment_method || null,
+          receiptImage: b.RECEIPT_IMAGE || b.receipt_image || null
+        }));
+
+        // Deduplicate by booking id: prefer row with receipt image or
+        // more specific payment status (PARTIAL_*, APPROVED, FULLY_PAID)
+        const byId = new Map();
+        mapped.forEach((appt) => {
+          const id = appt.id;
+          if (!id) {
+            const tempId = `noid-${Math.random()}`;
+            byId.set(tempId, appt);
+            return;
+          }
+
+          const existing = byId.get(id);
+          if (!existing) {
+            byId.set(id, appt);
+            return;
+          }
+
+          const existingStatus = (existing.paymentStatus || '').toUpperCase();
+          const newStatus = (appt.paymentStatus || '').toUpperCase();
+          const existingHasReceipt = !!existing.receiptImage;
+          const newHasReceipt = !!appt.receiptImage;
+
+          let useNew = false;
+
+          // Prefer row with receipt image
+          if (!existingHasReceipt && newHasReceipt) {
+            useNew = true;
+          }
+
+          // Prefer more specific payment status over plain PENDING
+          const isExistingPendingOnly = existingStatus === 'PENDING';
+          const isNewMoreSpecific =
+            newStatus.includes('PARTIAL') || newStatus === 'APPROVED' || newStatus === 'FULLY_PAID';
+          if (!useNew && isExistingPendingOnly && isNewMoreSpecific) {
+            useNew = true;
+          }
+
+          if (useNew) {
+            byId.set(id, appt);
+          }
         });
-        
-        console.log('Loaded bookings:', appointments.length, 'Sample:', appointments[0]);
+
+        // First pass: collapse by booking id
+        let deduped = Array.from(byId.values());
+
+        // Second pass: collapse by logical slot (client+service+date+time+staff)
+        const bySlotKey = new Map();
+        deduped.forEach((appt) => {
+          const key = [
+            (appt.client || '').trim(),
+            (appt.service || '').trim(),
+            (appt.date || '').toString(),
+            (appt.time || '').toString(),
+            (appt.staff || '').trim()
+          ].join('|');
+
+          const existing = bySlotKey.get(key);
+          if (!existing) {
+            bySlotKey.set(key, appt);
+            return;
+          }
+
+          const existingStatus = (existing.paymentStatus || '').toUpperCase();
+          const newStatus = (appt.paymentStatus || '').toUpperCase();
+          const existingHasReceipt = !!existing.receiptImage;
+          const newHasReceipt = !!appt.receiptImage;
+
+          let useNew = false;
+
+          // Prefer row with receipt image
+          if (!existingHasReceipt && newHasReceipt) {
+            useNew = true;
+          }
+
+          // Prefer more advanced payment status
+          const rankStatus = (s) => {
+            if (!s) return 0;
+            if (s === 'APPROVED' || s === 'PAID' || s === 'FULLY_PAID') return 3;
+            if (s.includes('PARTIAL')) return 2;
+            if (s === 'PENDING') return 1;
+            return 0;
+          };
+          const existingRank = rankStatus(existingStatus);
+          const newRank = rankStatus(newStatus);
+          if (!useNew && newRank > existingRank) {
+            useNew = true;
+          }
+
+          if (useNew) {
+            bySlotKey.set(key, appt);
+          }
+        });
+
+        appointments = Array.from(bySlotKey.values());
+
+        console.log('Loaded bookings (deduped):', appointments.length, 'Sample:', appointments[0]);
         console.log('All booking dates:', appointments.map(a => ({ id: a.id, date: a.date, type: typeof a.date })));
         
         renderAppointments();

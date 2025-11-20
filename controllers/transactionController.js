@@ -9,13 +9,14 @@ const transactionController = {
       const userId = req.user && (req.user.id || req.user.user_id);
       if (!userId) throw new ApiError(401, 'User not authenticated');
 
-      const { service_id, booking_date, booking_time, payment_method, payment_type } = req.body;
+      const { service_id, booking_date, booking_time, staff_id, payment_method, payment_type } = req.body;
       
       console.log('createTransaction request:', { userId, service_id, booking_date, booking_time, payment_method, payment_type });
 
       const result = await transactionService.createBookingWithTransaction({
         user_id: userId,
         service_id,
+        staff_id,
         booking_date,
         booking_time,
         payment_method,

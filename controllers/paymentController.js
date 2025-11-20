@@ -78,20 +78,24 @@ const paymentController = {
         );
 
         if (existingTransaction.length === 0) {
-          // Create transaction if it doesn't exist
+          // Create transaction if it doesn't exist (fallback safety).
+          // Default to FULLY PAID here, but for normal flows we expect
+          // the transaction to already exist (down payment or full).
           const bookingDetails = booking[0];
           await promisifyQuery(
             `INSERT INTO transactions (BOOKING_ID, SERVICE_ID, USER_ID, AMOUNT, PRICE, DISCOUNT, 
              PAYMENT_METHOD, PAYMENT_STATUS, RECEIPT_IMAGE, TRANSACTION_REFERENCE, booking_fee, remaining_balance, CREATED_AT) 
              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
             [bookingId, bookingDetails.SERVICE_ID, userId, 0, 0, 0, 
-             'GCASH', 'PENDING', receiptPath, `TXN-${Date.now()}-${bookingId}`, 0, 0]
+             'FULLY PAID', 'PENDING', receiptPath, `TXN-${Date.now()}-${bookingId}`, 0, 0]
           );
         } else {
-          // Update existing transaction
+          // Update existing transaction: only attach the receipt image.
+          // Keep PAYMENT_METHOD / PAYMENT_STATUS as they are so that
+          // DOWN PAYMENT vs FULLY PAID labels remain correct.
           await promisifyQuery(
-            'UPDATE transactions SET RECEIPT_IMAGE = ?, PAYMENT_METHOD = ?, PAYMENT_STATUS = ? WHERE BOOKING_ID = ?',
-            [receiptPath, 'GCASH', 'PENDING', bookingId]
+            'UPDATE transactions SET RECEIPT_IMAGE = ? WHERE BOOKING_ID = ?',
+            [receiptPath, bookingId]
           );
         }
 

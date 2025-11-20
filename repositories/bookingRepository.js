@@ -12,16 +12,20 @@ const bookingRepository = {
     return result.insertId;
   },
 
-  // Get booking by ID
   // Check if time slot is available
+  // A slot is considered blocked only by bookings that are still active
+  // (pending / pending_payment / confirmed) AND still have outstanding
+  // balance. Fully cleared/completed bookings will not block the slot.
   isTimeSlotAvailable: async (booking_date, booking_time, staff_id) => {
     const sql = `
-      SELECT COUNT(*) as count 
+      SELECT COUNT(*) as count
       FROM bookings b
+      LEFT JOIN transactions t ON t.BOOKING_ID = b.BOOKING_ID
       WHERE b.BOOKING_DATE = ?
-      AND b.BOOKING_TIME = ?
-      AND b.staff_id = ?
-      AND b.STATUS_NAME IN ('pending', 'pending_payment', 'confirmed')
+        AND b.BOOKING_TIME = ?
+        AND b.staff_id = ?
+        AND b.STATUS_NAME IN ('pending', 'pending_payment', 'confirmed')
+        AND COALESCE(t.REMAINING_BALANCE, 0) > 0
     `;
     const results = await promisifyQuery(sql, [booking_date, booking_time, staff_id]);
     return results[0].count === 0;
@@ -49,10 +53,12 @@ const bookingRepository = {
         b.BOOKING_DATE,
         b.BOOKING_TIME,
         b.STATUS_NAME as booking_status,
+        b.service_status,
         b.staff_id,
         st.FULL_NAME as staff_name,
         s.SERVICE_NAME,
         s.PRICE as service_price,
+        s.DURATION as service_duration,
 
         t.AMOUNT as paid_amount,
         t.PRICE as transaction_price,
@@ -75,6 +81,8 @@ const bookingRepository = {
   },
 
   // Find all bookings with full details (for admin)
+  // Join only the most recent transaction per booking to avoid
+  // duplicate rows when multiple transactions exist.
   findAll: async () => {
     const sql = `
       SELECT
@@ -99,7 +107,15 @@ const bookingRepository = {
       LEFT JOIN user u ON b.USER_ID = u.USER_ID
       LEFT JOIN services s ON b.SERVICE_ID = s.SERVICE_ID
       LEFT JOIN staff st ON b.staff_id = st.STAFF_ID
-      LEFT JOIN transactions t ON t.BOOKING_ID = b.BOOKING_ID
+      LEFT JOIN (
+        SELECT t1.*
+        FROM transactions t1
+        INNER JOIN (
+          SELECT BOOKING_ID, MAX(CREATED_AT) AS max_created
+          FROM transactions
+          GROUP BY BOOKING_ID
+        ) latest ON latest.BOOKING_ID = t1.BOOKING_ID AND latest.max_created = t1.CREATED_AT
+      ) t ON t.BOOKING_ID = b.BOOKING_ID
       ORDER BY b.BOOKING_DATE DESC, b.BOOKING_TIME DESC
     `;
 

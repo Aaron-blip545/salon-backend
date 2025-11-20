@@ -7,6 +7,7 @@ class TransactionRepository {
     const {
       user_id,
       service_id,
+      staff_id,
       booking_date,
       booking_time,
       amount,
@@ -22,12 +23,13 @@ class TransactionRepository {
       await promisifyQuery('START TRANSACTION');
 
       const insertBookingSql = `
-        INSERT INTO bookings (USER_ID, SERVICE_ID, BOOKING_DATE, BOOKING_TIME, STATUS_NAME, CREATED_AT)
-        VALUES (?, ?, ?, ?, 'pending', NOW())
+        INSERT INTO bookings (USER_ID, SERVICE_ID, staff_id, BOOKING_DATE, BOOKING_TIME, STATUS_NAME, CREATED_AT)
+        VALUES (?, ?, ?, ?, ?, 'pending', NOW())
       `;
 
-      console.log('Inserting booking with:', { user_id, service_id, booking_date, booking_time });
-      const bookingRes = await promisifyQuery(insertBookingSql, [user_id, service_id, booking_date, booking_time]);
+      console.log('Inserting booking with:', { user_id, service_id, staff_id, booking_date, booking_time });
+      const bookingRes = await promisifyQuery(insertBookingSql, [user_id, service_id, staff_id, booking_date, booking_time]);
+
       const bookingId = bookingRes.insertId;
       console.log('Booking created with ID:', bookingId);
 

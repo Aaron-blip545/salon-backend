@@ -51,7 +51,9 @@ const bookingController = {
           price: servicePrice,
           booking_fee: 0,
           remaining_balance: 0,
-          payment_method: paymentMethodUsed.toUpperCase(),
+          // At booking creation time we only know that payment is not yet complete,
+          // so store it as a down payment type for the enum column
+          payment_method: 'DOWN PAYMENT',
           payment_status: paymentMethodUsed.toLowerCase() === 'cash' ? 'PENDING' : 'PENDING'
         });
         console.log('✅ Transaction created successfully for booking:', result.booking_id);
@@ -241,26 +243,6 @@ const bookingController = {
     }
   },
 
-  // Confirm booking (convenience method)
-  confirmBooking: async (req, res, next) => {
-    try {
-      const { id } = req.params;
-      const user_id = req.user.id;
-      const user_role = req.user.role;
-
-      const result = await bookingService.updateBookingStatus({
-        booking_id: id,
-        status: 'confirmed',
-        user_id,
-        user_role
-      });
-
-      res.json({ success: true, message: result.message });
-    } catch (error) {
-      next(error);
-    }
-  },
-
   // Cancel booking (admin convenience method)
   cancelBooking: async (req, res, next) => {
     try {
@@ -275,13 +257,22 @@ const bookingController = {
         user_role
       });
 
+      // Also mark the related transaction as REJECTED so payment status
+      // is clear in user/admin views.
+      try {
+        await transactionRepository.updatePaymentStatus(id, 'REJECTED');
+      } catch (txnErr) {
+        console.error('Failed to mark payment as REJECTED for cancelled booking', id, txnErr);
+        // Don't fail the cancel endpoint just because this secondary update failed.
+      }
+
       res.json({ success: true, message: result.message });
     } catch (error) {
       next(error);
     }
   },
 
-  // Complete booking (convenience method)
+  // Complete booking (admin convenience method)
   completeBooking: async (req, res, next) => {
     try {
       const { id } = req.params;
@@ -291,6 +282,26 @@ const bookingController = {
       const result = await bookingService.updateBookingStatus({
         booking_id: id,
         status: 'completed',
+        user_id,
+        user_role
+      });
+
+      res.json({ success: true, message: result.message });
+    } catch (error) {
+      next(error);
+    }
+  },
+
+  // Confirm booking (convenience method)
+  confirmBooking: async (req, res, next) => {
+    try {
+      const { id } = req.params;
+      const user_id = req.user.id;
+      const user_role = req.user.role;
+
+      const result = await bookingService.updateBookingStatus({
+        booking_id: id,
+        status: 'confirmed',
         user_id,
         user_role
       });

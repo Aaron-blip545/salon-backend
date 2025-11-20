@@ -184,10 +184,8 @@ async function processCashPayment() {
     submitBtn.disabled = true;
 
     try {
-        const formData = new FormData();
-        formData.append('receipt', fileInput.files[0]);
-
-        const response = await fetch(`${API_BASE_URL}/transactions/`, {
+        // 1) Create booking + transaction via JSON
+        const createResponse = await fetch(`${API_BASE_URL}/transactions/`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -195,6 +193,7 @@ async function processCashPayment() {
             },
             body: JSON.stringify({
                 service_id: bookingDetails.service_id,
+                staff_id: bookingDetails.staff_id,
                 booking_date: bookingDetails.booking_date,
                 booking_time: bookingDetails.booking_time,
                 payment_method: 'CASH',
@@ -202,27 +201,48 @@ async function processCashPayment() {
             })
         });
 
-        const data = await response.json();
+        const createData = await createResponse.json();
 
-        if (data.success) {
-            sessionStorage.removeItem('bookingDetails');
-            sessionStorage.setItem('bookingSuccess', 'Down payment confirmed! Please pay the remaining balance on service day. Pending admin approval.');
-            sessionStorage.setItem('bookingSuccess', 'Booking confirmed! Please pay cash on service day. Pending admin approval.');
-            window.location.href = 'bookedservices.html';
-        } else {
-            Swal.fire({
-                icon: 'error',
-                title: 'Booking Failed',
-                text: 'Failed to create booking: ' + data.message,
-                confirmButtonColor: '#d33'
-            });
+        if (!createResponse.ok || !createData.success) {
+            throw new Error(createData.message || 'Failed to create booking');
         }
+
+        // Extract booking_id from response (supports different shapes)
+        const bookingFromResp = createData.data && (createData.data.booking || createData.data.BOOKING || {});
+        const bookingId =
+            (bookingFromResp && (bookingFromResp.BOOKING_ID || bookingFromResp.booking_id)) ||
+            createData.data.booking_id ||
+            createData.data.BOOKING_ID;
+
+        // 2) Upload receipt image tied to this booking, so admin panel can show proof
+        if (bookingId) {
+            const uploadForm = new FormData();
+            uploadForm.append('receipt', fileInput.files[0]);
+
+            const uploadResponse = await fetch(`${API_BASE_URL}/payments/${bookingId}/receipt`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${getToken()}`
+                },
+                body: uploadForm
+            });
+
+            const uploadData = await uploadResponse.json();
+
+            if (!uploadResponse.ok || !uploadData.success) {
+                throw new Error(uploadData.message || 'Failed to upload receipt');
+            }
+        }
+
+        sessionStorage.removeItem('bookingDetails');
+        sessionStorage.setItem('bookingSuccess', 'Down payment confirmed! Please pay the remaining balance on service day. Pending admin approval.');
+        window.location.href = 'bookedservices.html';
     } catch (error) {
         console.error('Error:', error);
         Swal.fire({
             icon: 'error',
             title: 'Transaction Failed',
-            text: 'Transaction failed. Please try again.',
+            text: error.message || 'Transaction failed. Please try again.',
             confirmButtonColor: '#d33'
         });
     } finally {

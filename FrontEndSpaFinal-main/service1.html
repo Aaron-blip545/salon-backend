@@ -347,7 +347,20 @@
           const data = await res.json();
           if (!data.success) throw new Error(data.message || "Failed to load slots");
 
-          const booked = new Set(data.data.booked_slots || []);
+          // Normalize booked slot times from API (e.g., "09:00:00") to match
+          // the "HH:MM" format used by the front-end buttons (e.g., "09:00").
+          const rawBooked = data.data.booked_slots || [];
+          const booked = new Set(
+            rawBooked.map((t) => {
+              if (!t) return t;
+              const str = String(t);
+              // If it looks like HH:MM:SS, trim to HH:MM
+              if (/^\d{2}:\d{2}:\d{2}$/.test(str)) {
+                return str.slice(0, 5);
+              }
+              return str;
+            })
+          );
           const hours = [
             "09:00",
             "10:00",
@@ -409,6 +422,12 @@
                 btn.style.borderColor = "#2ecc71";
                 btn.style.color = "#1b5e20";
                 selectedTimeSlot = btn.getAttribute("data-time");
+
+                // Re-enable the Book button now that a valid slot is selected
+                const bookBtnEl = document.getElementById("bookSubmitBtn");
+                if (bookBtnEl) {
+                  bookBtnEl.disabled = false;
+                }
               });
             }
             grid.appendChild(btn);
@@ -628,6 +647,7 @@
                 booking_id: created.BOOKING_ID || created.booking_id,
                 service_id: bookingData.service_id,
                 service_name: currentService.SERVICE_NAME,
+                staff_id: selectedStaffId,
                 staff_name: selectedStaffName,
                 booking_date: bookingData.booking_date,
                 booking_time: bookingData.booking_time,
@@ -649,12 +669,21 @@
                 markSlotAsBooked(selectedTimeSlot);
               }
 
-              if (chosenMsgEl) {
-                chosenMsgEl.textContent =
-                  "That time slot has just been booked by someone else. Please choose another available time.";
+              // Clear the selected time so the user must pick a new available slot
+              selectedTimeSlot = null;
+
+              // Disable the Book button until a new valid slot is chosen
+              const bookBtnEl = document.getElementById("bookSubmitBtn");
+              if (bookBtnEl) {
+                bookBtnEl.disabled = true;
               }
 
-              // Optionally refresh slots for this date to catch any other new bookings
+              // Clear any previous confirmation message; rely on the red slot styling instead
+              if (chosenMsgEl) {
+                chosenMsgEl.textContent = "";
+              }
+
+              // Refresh slots for this date to catch any other new bookings
               if (selectedStaffId && date) {
                 loadTimeSlots(date);
               }
@@ -732,7 +761,11 @@
           cell.className = "calendar-day";
 
           const cellDate = new Date(currentCalendarYear, currentCalendarMonth, day);
-          const dateStr = cellDate.toISOString().split("T")[0];
+          // Build date string in local time to avoid timezone shifting issues
+          const y = cellDate.getFullYear();
+          const m = String(cellDate.getMonth() + 1).padStart(2, "0");
+          const d = String(cellDate.getDate()).padStart(2, "0");
+          const dateStr = `${y}-${m}-${d}`;
           const isToday =
             cellDate.getFullYear() === todayY &&
             cellDate.getMonth() === todayM &&
